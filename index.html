@@ -67,6 +67,11 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .var-card.incomplet .badge{background:#FDEBD8;color:#a3560f}
 .var-card button{display:block;margin:8px auto 0;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--bd);background:#fff;color:var(--md);cursor:pointer;font-family:'DM Sans',sans-serif}
 .var-card button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
+.var-card .portal{margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd)}
+.var-card .portal a{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:none}
+.var-card .portal a:hover{text-decoration:underline}
+.var-card .portal .pin{font-size:10px;color:var(--md);margin-top:3px}
+.var-card .portal .pin b{font-family:'Playfair Display',serif;letter-spacing:.15em;color:var(--dk);font-size:12px}
 .panel-toolbar select{margin-left:8px}
 .panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
 
@@ -117,6 +122,10 @@ var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var VAR_PERIODE_DEBUT = '2026-09'; // premier mois suivi dans l'historique
+
+var VAR_PORTAL_BASE = 'https://edgard-opticiens.github.io/variables/';
+var VAR_DATA_BASE = 'https://raw.githubusercontent.com/edgard-opticiens/variables/main/data/';
+var PIN_CACHE = {};
 
 function tryGate(){
   var pin = document.getElementById('gatePin').value.trim();
@@ -234,12 +243,36 @@ function renderVariables(){
     var tagCls = m.statut === 'non_envoye' ? 'non_envoye' : 'incomplet';
     var tagTxt = m.statut === 'non_envoye' ? 'Non envoyée' : 'Incomplète';
     var sig = m.statut === 'incomplet' ? '<div class="sig">' + m.signatures_ok + ' / ' + m.total_salaries + ' signés</div>' : '';
+    var portalUrl = VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(m.code);
+    var pinTxt = PIN_CACHE.hasOwnProperty(m.code) ? (PIN_CACHE[m.code] || '—') : '…';
     return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
       '<div class="dir">' + esc(m.directeur) + '</div>' +
       '<span class="badge">' + tagTxt + '</span>' + sig +
-      '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button></div>';
+      '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>' +
+      '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a>' +
+      '<div class="pin" id="pin-' + esc(m.code) + '">Code : <b>' + esc(pinTxt) + '</b></div></div>' +
+      '</div>';
   }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
   box.innerHTML = body;
+  loadPinsFor(pending.map(function(m){ return m.code; }));
+}
+
+function loadPinsFor(codes){
+  codes.forEach(function(code){
+    if (PIN_CACHE.hasOwnProperty(code)) return;
+    fetch(VAR_DATA_BASE + encodeURIComponent(code) + '.json', {cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        PIN_CACHE[code] = d && d.pin ? String(d.pin) : null;
+        var el = document.getElementById('pin-' + code);
+        if (el) el.innerHTML = 'Code : <b>' + esc(PIN_CACHE[code] || '—') + '</b>';
+      })
+      .catch(function(){
+        PIN_CACHE[code] = null;
+        var el = document.getElementById('pin-' + code);
+        if (el) el.innerHTML = 'Code : <b>—</b>';
+      });
+  });
 }
 
 function fetchVariables(periode){
