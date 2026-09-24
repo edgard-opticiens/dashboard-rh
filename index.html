@@ -65,6 +65,10 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .var-card.non_envoye .badge{background:#FADBD8;color:#943126}
 .var-card.incomplet{border-color:#F6DCA8;background:#FEFAF0}
 .var-card.incomplet .badge{background:#FDEBD8;color:#a3560f}
+.var-card button{display:block;margin:8px auto 0;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--bd);background:#fff;color:var(--md);cursor:pointer;font-family:'DM Sans',sans-serif}
+.var-card button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
+.panel-toolbar select{margin-left:8px}
+.panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
 
 .item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:6px 0 12px}
 .item-card{border-radius:10px;padding:14px 16px;border:1.5px solid var(--bd);background:#FEFAF0;display:flex;flex-direction:column;gap:7px}
@@ -108,9 +112,11 @@ var RH_CODE = 'Edgard37*'; // code d'accès partagé service RH
 
 var N8N_DEMANDES  = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-demandes';
 var N8N_VARIABLES = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-variables-paie';
+var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser-variable-paie';
 var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
+var VAR_PERIODE_DEBUT = '2026-09'; // premier mois suivi dans l'historique
 
 function tryGate(){
   var pin = document.getElementById('gatePin').value.trim();
@@ -155,9 +161,28 @@ function esc(s){ return (s||'').toString().replace(/[&<>]/g, function(c){ return
 
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
+var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function periodesDisponibles(){
+  var parts = VAR_PERIODE_DEBUT.split('-');
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+  var now = new Date();
+  var cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  var list = [];
+  while (d <= cur){
+    list.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+    d = new Date(d.getFullYear(), d.getMonth()+1, 1);
+  }
+  return list.reverse();
+}
+function libellePeriode(p){
+  var parts = p.split('-');
+  return MOIS_FR[Number(parts[1])-1] + ' ' + parts[0];
+}
 
 /* ============================ DONNEES ============================ */
 var STATE = { cp: [], variables: null, samedis: [], hs: [], acompte: [] };
+var VAR_PERIODE = null;
 
 function togglePanel(id){
   document.getElementById(id).classList.toggle('expanded');
@@ -211,10 +236,34 @@ function renderVariables(){
     var sig = m.statut === 'incomplet' ? '<div class="sig">' + m.signatures_ok + ' / ' + m.total_salaries + ' signés</div>' : '';
     return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
       '<div class="dir">' + esc(m.directeur) + '</div>' +
-      '<span class="badge">' + tagTxt + '</span>' + sig + '</div>';
-  }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ce mois.</div>';
+      '<span class="badge">' + tagTxt + '</span>' + sig +
+      '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button></div>';
+  }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
   box.innerHTML = body;
-  document.getElementById('var-note').textContent = 'Période ciblée : ' + info.moisTxt + ' ' + info.annee + ' (mois précédent, délai habituel de transmission).';
+}
+
+function fetchVariables(periode){
+  return fetch(N8N_VARIABLES + '?periode=' + encodeURIComponent(periode))
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return null; })
+    .then(function(data){
+      STATE.variables = data && data.magasins ? data : null;
+      renderVariables();
+    });
+}
+function onVarPeriodeChange(){
+  VAR_PERIODE = document.getElementById('var-periode-select').value;
+  document.getElementById('sec-var').querySelector('.panel-body').innerHTML = '<div class="empty">Chargement…</div>';
+  fetchVariables(VAR_PERIODE);
+}
+function finaliserVariable(code){
+  if (!confirm('Marquer ' + code + ' comme finalisée pour ' + libellePeriode(VAR_PERIODE) + ', même sans toutes les signatures ?')) return;
+  var commentaire = prompt('Commentaire (optionnel) :', '') || '';
+  fetch(N8N_VAR_FINALIZE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ magasin_code: code, periode: VAR_PERIODE, finalise: true, finalise_par: 'RH', commentaire: commentaire })
+  }).then(function(){ fetchVariables(VAR_PERIODE); })
+    .catch(function(){ alert('Erreur lors de la finalisation — réessayez.'); });
 }
 
 function renderSamedis(){
@@ -261,7 +310,8 @@ function buildPanels(){
     '<div class="panel" id="sec-var" style="--pc:#2980B9">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-var\')"><div><div class="n" id="var-count">…</div><div class="l">Magasins variables paie à jour</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-detail">' +
-        '<div class="panel-note" id="var-note"></div>' +
+        '<div class="panel-toolbar"><span class="tb-label">Période :</span><select id="var-periode-select" onchange="onVarPeriodeChange()"></select></div>' +
+        '<div class="panel-note" id="var-note">Astuce : utilisez « Marquer finalisée » si une signature manquante ne viendra jamais.</div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>' +
@@ -279,28 +329,31 @@ function loadAll(){
   document.getElementById('lastUpdate').textContent = 'Chargement...';
   buildPanels();
 
+  var periodes = periodesDisponibles();
+  var sel = document.getElementById('var-periode-select');
+  sel.innerHTML = periodes.map(function(p){ return '<option value="' + p + '">' + libellePeriode(p) + '</option>'; }).join('');
+  if (!VAR_PERIODE || periodes.indexOf(VAR_PERIODE) === -1) VAR_PERIODE = periodes[0];
+  sel.value = VAR_PERIODE;
+
   var pCP = fetch(N8N_DEMANDES).then(function(r){ return r.json(); }).catch(function(){ return { data: [], archive: [] }; });
-  var pVar = fetch(N8N_VARIABLES).then(function(r){ return r.json(); }).catch(function(){ return null; });
   var pSam = fetch(N8N_SAMEDIS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
+  var pVar = fetchVariables(VAR_PERIODE);
 
-  Promise.all([pCP, pVar, pSam, pHS, pAC]).then(function(results){
+  Promise.all([pCP, pSam, pHS, pAC, pVar]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
     STATE.cp = demandes.filter(function(d){ return d.statut === 'en_attente'; });
 
-    STATE.variables = results[1] && results[1].magasins ? results[1] : null;
-
-    var samRaw = Array.isArray(results[2]) ? results[2] : (results[2].data || []);
+    var samRaw = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
     STATE.samedis = samRaw.filter(function(s){ return s.statut === 'en_attente'; });
 
-    STATE.hs = (results[3] && results[3].data) || [];
-    STATE.acompte = (results[4] && results[4].data) || [];
+    STATE.hs = (results[2] && results[2].data) || [];
+    STATE.acompte = (results[3] && results[3].data) || [];
 
     renderCP();
-    renderVariables();
     renderSamedis();
     renderHsAc();
 
