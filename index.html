@@ -45,7 +45,7 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .section-body{padding:6px 20px 16px}
 .row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0EDE4;font-size:13px;flex-wrap:wrap}
 .row:last-child{border-bottom:none}
-.row .tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:3px 8px;border-radius:5px;flex:0 0 auto}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:3px 8px;border-radius:5px;flex:0 0 auto;white-space:nowrap}
 .tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp{background:#FDEBD8;color:#a3560f}
 .tag.non_envoye{background:#FADBD8;color:#943126}
 .tag.complet{background:#D5F5E3;color:#1e7a45}
@@ -54,6 +54,26 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .row .since{color:#999;font-size:11px;flex:0 0 auto;white-space:nowrap}
 .empty{color:var(--md);font-size:12.5px;padding:14px 0;text-align:center}
 .section-note{font-size:11px;color:#999;padding:0 20px 14px;margin-top:-6px}
+
+.var-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:6px 0 12px}
+.var-card{border-radius:10px;padding:14px 10px 12px;text-align:center;border:1.5px solid var(--bd);background:#FBFAF7}
+.var-card .code{font-family:'Playfair Display',serif;font-weight:700;font-size:16px;letter-spacing:.2px}
+.var-card .dir{font-size:11px;color:var(--md);margin-top:3px;line-height:1.3;min-height:28px}
+.var-card .badge{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:8px}
+.var-card .sig{font-size:10px;color:var(--md);margin-top:4px}
+.var-card.non_envoye{border-color:#F3C6B8;background:#FDF4F1}
+.var-card.non_envoye .badge{background:#FADBD8;color:#943126}
+.var-card.incomplet{border-color:#F6DCA8;background:#FEFAF0}
+.var-card.incomplet .badge{background:#FDEBD8;color:#a3560f}
+
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:6px 0 12px}
+.item-card{border-radius:10px;padding:14px 16px;border:1.5px solid var(--bd);background:#FEFAF0;display:flex;flex-direction:column;gap:7px}
+.item-card.non_envoye{border-color:#F3C6B8;background:#FDF4F1}
+.item-card .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.item-card .who{font-weight:700;font-size:14px;line-height:1.3}
+.item-card .tag{flex:0 0 auto}
+.item-card .meta{color:var(--md);font-size:12px;line-height:1.4}
+.item-card .since{color:#999;font-size:10.5px;margin-top:auto;padding-top:2px}
 </style>
 </head>
 <body>
@@ -163,16 +183,15 @@ function renderStats(){
 
 function renderCP(){
   var pending = STATE.cp;
-  var body = pending.length ? pending.map(function(d){
+  var body = pending.length ? '<div class="item-grid">' + pending.map(function(d){
     var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
     var type = esc(d.type || 'CP');
     var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
     var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
-    return '<div class="row"><span class="tag en_attente">' + type + '</span>' +
-      '<span class="who">' + who + '</span>' +
-      '<span class="meta">' + soc + ' — ' + dates + (attente ? ' — ' + attente : '') + '</span>' +
-      '<span class="since">' + joursDepuis(d.date_derniere_action) + '</span></div>';
-  }).join('') : '<div class="empty">Aucune demande de CP ou d\'absence en attente.</div>';
+    return '<div class="item-card en_attente"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + type + '</span></div>' +
+      '<div class="meta">' + soc + ' — ' + dates + (attente ? '<br>' + attente : '') + '</div>' +
+      '<div class="since">' + joursDepuis(d.date_derniere_action) + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande de CP ou d\'absence en attente.</div>';
   document.getElementById('sec-cp').querySelector('.section-body').innerHTML = body;
   document.getElementById('cp-count').textContent = pending.length;
   document.getElementById('cp-count').className = 'count' + (pending.length===0 ? ' zero' : '');
@@ -186,26 +205,25 @@ function renderVariables(){
   var pending = info.magasins.filter(function(m){ return m.statut !== 'complet'; });
   countEl.textContent = pending.length;
   countEl.className = 'count' + (pending.length===0 ? ' zero' : '');
-  var body = pending.length ? pending.map(function(m){
+  var body = pending.length ? '<div class="var-grid">' + pending.map(function(m){
     var tagCls = m.statut === 'non_envoye' ? 'non_envoye' : 'incomplet';
-    var tagTxt = m.statut === 'non_envoye' ? 'Non envoyée' : 'Signatures incomplètes';
-    var meta = m.statut === 'incomplet' ? (m.signatures_ok + ' / ' + m.total_salaries + ' salariés signés') : '';
-    return '<div class="row"><span class="tag ' + tagCls + '">' + tagTxt + '</span>' +
-      '<span class="who">' + esc(m.code) + '</span>' +
-      '<span class="meta">' + esc(m.directeur) + (meta ? ' — ' + meta : '') + '</span></div>';
-  }).join('') : '<div class="empty">Tous les magasins sont à jour pour ce mois.</div>';
+    var tagTxt = m.statut === 'non_envoye' ? 'Non envoyée' : 'Incomplète';
+    var sig = m.statut === 'incomplet' ? '<div class="sig">' + m.signatures_ok + ' / ' + m.total_salaries + ' signés</div>' : '';
+    return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
+      '<div class="dir">' + esc(m.directeur) + '</div>' +
+      '<span class="badge">' + tagTxt + '</span>' + sig + '</div>';
+  }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ce mois.</div>';
   box.innerHTML = body;
   document.getElementById('var-note').textContent = 'Période ciblée : ' + info.moisTxt + ' ' + info.annee + ' (mois précédent, délai habituel de transmission).';
 }
 
 function renderSamedis(){
   var pending = STATE.samedis;
-  var body = pending.length ? pending.map(function(s){
+  var body = pending.length ? '<div class="item-grid">' + pending.map(function(s){
     var who = esc(s.prenom) + ' ' + esc((s.nom||'').toUpperCase());
-    return '<div class="row"><span class="tag reseau">En attente</span>' +
-      '<span class="who">' + who + '</span>' +
-      '<span class="meta">' + esc(s.societe) + ' — samedi du ' + fmtDate(s.date_samedi || s.date) + '</span></div>';
-  }).join('') : '<div class="empty">Aucun samedi tournant en attente.</div>';
+    return '<div class="item-card reseau"><div class="top"><span class="who">' + who + '</span><span class="tag reseau">En attente</span></div>' +
+      '<div class="meta">' + esc(s.societe) + ' — samedi du ' + fmtDate(s.date_samedi || s.date) + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucun samedi tournant en attente.</div>';
   document.getElementById('sec-samedi').querySelector('.section-body').innerHTML = body;
   document.getElementById('samedi-count').textContent = pending.length;
   document.getElementById('samedi-count').className = 'count' + (pending.length===0 ? ' zero' : '');
@@ -221,12 +239,11 @@ function renderHsAc(){
       label: AC_ETAPE_LABEL[r.etape] || r.etape, type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), maj: r.date_maj };
   });
   var all = hs.concat(ac);
-  var body = all.length ? all.map(function(r){
-    return '<div class="row"><span class="tag ' + r.tag + '">' + esc(r.type) + '</span>' +
-      '<span class="who">' + r.who + '</span>' +
-      '<span class="meta">' + r.soc + ' — ' + esc(r.label) + '</span>' +
-      '<span class="since">' + joursDepuis(r.maj) + '</span></div>';
-  }).join('') : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
+  var body = all.length ? '<div class="item-grid">' + all.map(function(r){
+    return '<div class="item-card ' + r.tag + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
+      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
+      '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
   document.getElementById('sec-hsac').querySelector('.section-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
   document.getElementById('hsac-count').className = 'count' + (all.length===0 ? ' zero' : '');
