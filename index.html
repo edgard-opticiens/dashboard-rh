@@ -67,6 +67,9 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .var-card.incomplet .badge{background:#FDEBD8;color:#a3560f}
 .var-card button{display:block;margin:8px auto 0;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--bd);background:#fff;color:var(--md);cursor:pointer;font-family:'DM Sans',sans-serif}
 .var-card button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
+.var-card button.relance{margin-top:6px;border-color:var(--blue);color:var(--blue)}
+.var-card button.relance:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.var-card button.relance:disabled{opacity:.55;cursor:default;background:#fff;color:var(--blue)}
 .var-card .portal{margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd)}
 .var-card .portal a{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:none}
 .var-card .portal a:hover{text-decoration:underline}
@@ -118,6 +121,7 @@ var RH_CODE = 'Edgard37*'; // code d'accès partagé service RH
 var N8N_DEMANDES  = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-demandes';
 var N8N_VARIABLES = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-variables-paie';
 var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser-variable-paie';
+var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-relance-manuelle';
 var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
@@ -249,6 +253,7 @@ function renderVariables(){
       '<div class="dir">' + esc(m.directeur) + '</div>' +
       '<span class="badge">' + tagTxt + '</span>' + sig +
       '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>' +
+      '<button type="button" class="relance" id="relance-' + esc(m.code) + '" onclick="relancerVariable(\'' + esc(m.code) + '\',\'' + tagCls + '\',' + (m.signatures_ok||0) + ',' + (m.total_salaries||0) + ')">✉️ Relancer</button>' +
       '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a>' +
       '<div class="pin" id="pin-' + esc(m.code) + '">Code : <b>' + esc(pinTxt) + '</b></div></div>' +
       '</div>';
@@ -297,6 +302,35 @@ function finaliserVariable(code){
     body: JSON.stringify({ magasin_code: code, periode: VAR_PERIODE, finalise: true, finalise_par: 'RH', commentaire: commentaire })
   }).then(function(){ fetchVariables(VAR_PERIODE); })
     .catch(function(){ alert('Erreur lors de la finalisation — réessayez.'); });
+}
+
+function relancerVariable(code, statut, signaturesOk, totalSalaries){
+  var parts = (VAR_PERIODE || '').split('-');
+  var annee = Number(parts[0]) || new Date().getFullYear();
+  var moisTxt = MOIS_FR[Number(parts[1]) - 1] || '';
+  if (!confirm('Envoyer un e-mail de rappel au directeur de ' + code + ' pour ' + libellePeriode(VAR_PERIODE) + ' ?')) return;
+  var btn = document.getElementById('relance-' + code);
+  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  fetch(N8N_VAR_RELANCE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      code: code, magasin_nom: code, periode: VAR_PERIODE, moisTxt: moisTxt, annee: annee,
+      statut: statut, signatures_ok: signaturesOk, total_salaries: totalSalaries
+    })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        if (btn){ btn.textContent = '✔️ Envoyé'; }
+        setTimeout(function(){ if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; } }, 4000);
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de l'envoi de la relance — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de l'envoi de la relance — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+    });
 }
 
 function renderSamedis(){
