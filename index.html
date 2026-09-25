@@ -33,7 +33,6 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
   #sec-samedi{order:2}
   #sec-var{order:3}
   #sec-hsac{order:4}
-  #sec-ndf{order:5}
 }
 .panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
 .panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
@@ -89,19 +88,6 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .var-card .portal a:hover{text-decoration:underline}
 .var-card .portal .pin{font-size:10px;color:var(--md);margin-top:3px}
 .var-card .portal .pin b{font-family:'Playfair Display',serif;letter-spacing:.15em;color:var(--dk);font-size:12px}
-.var-card button.deposer{margin-top:6px;border-color:var(--green);color:var(--green);font-weight:700}
-.var-card button.deposer:hover{background:var(--green);color:#fff;border-color:var(--green)}
-
-#depot-overlay{display:none;position:fixed;inset:0;background:rgba(20,20,20,.55);z-index:80;align-items:center;justify-content:center;padding:14px}
-#depot-overlay.open{display:flex}
-.depot-box{background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:100%;max-width:1100px;height:92vh;display:flex;flex-direction:column;overflow:hidden}
-.depot-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--bd);background:var(--lt)}
-.depot-head .t{font-family:'Playfair Display',serif;font-weight:700;font-size:15px}
-.depot-head .t small{display:block;font-family:'DM Sans',sans-serif;font-weight:400;font-size:11px;color:var(--md);margin-top:2px}
-.depot-head button{border:none;background:#fff;border:1px solid var(--bd);border-radius:8px;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--md)}
-.depot-head button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
-.depot-box iframe{flex:1;border:0;width:100%}
-.depot-loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--md);font-size:13px}
 .panel-toolbar select{margin-left:8px}
 .panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
 
@@ -148,17 +134,6 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 
 </div>
 
-<div id="depot-overlay" onclick="if(event.target===this)fermerDepot()">
-  <div class="depot-box">
-    <div class="depot-head">
-      <div class="t" id="depot-title">Dépôt variable de paie<small id="depot-sub"></small></div>
-      <button type="button" onclick="fermerDepot()" title="Fermer">✕</button>
-    </div>
-    <div class="depot-loading" id="depot-loading">Chargement du formulaire…</div>
-    <iframe id="depot-iframe" style="display:none"></iframe>
-  </div>
-</div>
-
 <script>
 /* ============================ CONFIG ============================ */
 var RH_CODE = 'Edgard37*'; // code d'accès partagé service RH
@@ -172,7 +147,6 @@ var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-su
 var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
-var N8N_NDF       = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-notes-de-frais';
 var VAR_PERIODE_DEBUT = '2026-07'; // premier mois suivi dans l'historique
 
 var VAR_PORTAL_BASE = 'https://edgard-opticiens.github.io/variables/';
@@ -244,7 +218,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], variables: null, samedis: [], hs: [], acompte: [], ndf: [] };
+var STATE = { cp: [], variables: null, samedis: [], hs: [], acompte: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -315,7 +289,6 @@ function renderVariables(){
       return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
         '<div class="dir">' + esc(m.directeur) + '</div>' +
         '<span class="badge">' + tagTxt + '</span>' + sig +
-        '<button type="button" class="deposer" onclick="ouvrirDepot(\'' + attrSafe(m.code) + '\',\'' + attrSafe(m.directeur||'') + '\')">📝 Déposer la variable</button>' +
         '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>' +
         '<button type="button" class="relance" id="relance-' + esc(m.code) + '" onclick="relancerVariable(\'' + esc(m.code) + '\',\'' + tagCls + '\',' + (m.signatures_ok||0) + ',' + (m.total_salaries||0) + ')">✉️ Relancer</button>' +
         '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a>' +
@@ -376,54 +349,6 @@ function loadPinsFor(codes){
       });
   });
 }
-
-function ouvrirDepot(code, directeur){
-  var overlay = document.getElementById('depot-overlay');
-  var iframe = document.getElementById('depot-iframe');
-  var loading = document.getElementById('depot-loading');
-  document.getElementById('depot-sub').textContent = code + (directeur ? ' — ' + directeur : '');
-  iframe.style.display = 'none';
-  loading.style.display = 'flex';
-  loading.textContent = 'Chargement du formulaire…';
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  function launch(pin){
-    if (!pin){
-      loading.textContent = "Code d'accès introuvable pour ce magasin — réessayez ou ouvrez le portail directement.";
-      return;
-    }
-    var src = VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin) + '&periode=' + encodeURIComponent(VAR_PERIODE);
-    iframe.onload = function(){ loading.style.display = 'none'; iframe.style.display = 'block'; };
-    iframe.src = src;
-  }
-
-  if (PIN_CACHE.hasOwnProperty(code) && PIN_CACHE[code]){
-    launch(PIN_CACHE[code]);
-  } else {
-    fetch(VAR_DATA_BASE + encodeURIComponent(code) + '.json', {cache:'no-store'})
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(d){
-        var pin = d && d.pin ? String(d.pin) : null;
-        PIN_CACHE[code] = pin;
-        launch(pin);
-      })
-      .catch(function(){ loading.textContent = "Impossible de charger le code d'accès — réessayez."; });
-  }
-}
-
-function fermerDepot(){
-  document.getElementById('depot-overlay').classList.remove('open');
-  document.getElementById('depot-iframe').src = 'about:blank';
-  document.body.style.overflow = '';
-}
-
-window.addEventListener('message', function(e){
-  if (e && e.data && e.data.source === 'variables-live' && e.data.type === 'submitted'){
-    fermerDepot();
-    fetchVariables(VAR_PERIODE);
-  }
-});
 
 function fetchVariables(periode){
   return fetch(N8N_VARIABLES + '?periode=' + encodeURIComponent(periode))
@@ -573,25 +498,6 @@ function renderHsAc(){
   }));
 }
 
-function renderNdf(){
-  var pending = STATE.ndf;
-  var body = pending.length ? '<div class="item-grid">' + pending.map(function(n){
-    var who = esc(n.prenom) + ' ' + esc((n.nom||'').toUpperCase());
-    var montant = (typeof n.montant === 'number') ? n.montant.toFixed(2).replace('.', ',') + ' €' : '';
-    var lignesTxt = n.nb_lignes + ' ligne' + (n.nb_lignes > 1 ? 's' : '') + (montant ? ' — ' + montant : '');
-    var attente = n.en_attente_nom ? 'En attente de ' + esc(n.en_attente_nom) : '';
-    return '<div class="item-card en_attente"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">Note de frais</span></div>' +
-      '<div class="meta">' + esc(n.societe) + ' — ' + esc(lignesTxt) + (attente ? '<br>' + attente : '') + '</div>' +
-      '<div class="since">' + joursDepuis(n.date_maj) + '</div></div>';
-  }).join('') + '</div>' : '<div class="empty">Aucune note de frais en attente.</div>';
-  document.getElementById('sec-ndf').querySelector('.panel-body').innerHTML = body;
-  document.getElementById('ndf-count').textContent = pending.length;
-  document.getElementById('ndf-count').className = 'n' + (pending.length===0 ? ' ok' : '');
-  document.getElementById('ndf-preview').innerHTML = previewHtml(pending.map(function(n){
-    return esc(n.prenom) + ' ' + esc((n.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(n.societe);
-  }));
-}
-
 function buildPanels(){
   document.getElementById('panels').innerHTML =
     '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
@@ -620,11 +526,6 @@ function buildPanels(){
       '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
-    '</div>' +
-    '<div class="panel" id="sec-ndf" style="--pc:#C0392B">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-ndf\')"><div><div class="n" id="ndf-count">0</div><div class="l">Notes de frais en attente</div></div><div class="chev">▾</div></div>' +
-      '<div class="panel-preview" id="ndf-preview" onclick="togglePanel(\'sec-ndf\')"></div>' +
-      '<div class="panel-detail"><div class="panel-body"></div></div>' +
     '</div>';
 }
 
@@ -649,10 +550,9 @@ function loadAll(){
   var pSam = fetch(N8N_SAMEDIS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
-  var pNdf = fetch(N8N_NDF).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
 
-  Promise.all([pCP, pSam, pHS, pAC, pNdf, pVar]).then(function(results){
+  Promise.all([pCP, pSam, pHS, pAC, pVar]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -663,12 +563,10 @@ function loadAll(){
 
     STATE.hs = (results[2] && results[2].data) || [];
     STATE.acompte = (results[3] && results[3].data) || [];
-    STATE.ndf = (results[4] && results[4].data) || [];
 
     renderCP();
     renderSamedis();
     renderHsAc();
-    renderNdf();
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
   }).catch(function(e){
