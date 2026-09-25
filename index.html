@@ -3,197 +3,350 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tableau de bord — Demandes de congés</title>
+<title>Tableau de bord RH — Groupe Edgard</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--g:#C9A84C;--dk:#1A1A1A;--md:#666;--lt:#F9F7F2;--bd:#E0DCD0;--green:#27AE60;--orange:#E67E22;--red:#C0392B;--blue:#2980B9}
+:root{--g:#C9A84C;--dk:#1A1A1A;--md:#666;--lt:#F9F7F2;--bd:#E0DCD0;--green:#27AE60;--orange:#E67E22;--red:#C0392B;--blue:#2980B9;--purple:#8E44AD}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;padding:20px 14px 50px;color:var(--dk)}
-.hdr{max-width:1100px;margin:0 auto 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;padding:20px 14px 60px;color:var(--dk)}
+
+#gate{position:fixed;inset:0;background:#F2EFE8;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);max-width:360px;width:100%;padding:30px 26px;text-align:center}
+.gate-box h2{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px}
+.gate-box p{font-size:12.5px;color:#666;margin-bottom:18px}
+.gate-box input{width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:6px;margin-bottom:10px;font-size:15px;font-family:'DM Sans',sans-serif;text-align:center;letter-spacing:.2em}
+.gate-box button{width:100%;padding:11px;background:var(--dk);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer}
+#gateErr{color:var(--red);font-size:12px;margin-top:10px;min-height:16px}
+
+#app{display:none}
+
+.hdr{max-width:1800px;margin:0 auto 18px;padding:0 4px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
 .hdr h1{font-family:'Playfair Display',serif;font-size:22px;color:var(--dk)}
 .hdr .sub{font-size:12px;color:var(--md);margin-top:2px}
 .refresh{background:var(--dk);color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
 .refresh:hover{background:#333}
-.filters{max-width:1100px;margin:0 auto 16px;display:flex;gap:10px;flex-wrap:wrap}
-.filters select,.filters input{border:1.5px solid var(--bd);border-radius:6px;padding:7px 12px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff}
-.stats{max-width:1100px;margin:0 auto 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.stat{background:#fff;border-radius:8px;padding:12px 16px;border-left:4px solid var(--g)}
-.stat .n{font-family:'Playfair Display',serif;font-size:26px;font-weight:700}
-.stat .l{font-size:10.5px;color:var(--md);text-transform:uppercase;letter-spacing:.5px}
-table{max-width:1100px;margin:0 auto;width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.07)}
-th{background:var(--dk);color:#fff;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;padding:11px 12px;text-align:left}
-td{padding:11px 12px;font-size:12.5px;border-bottom:1px solid var(--bd)}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--lt)}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700}
-.b-attente{background:#FFF3CD;color:#856404}
-.b-valide{background:#E8F4E8;color:var(--green)}
-.b-refuse{background:#FDEDEC;color:var(--red)}
-.retard{color:var(--red);font-weight:700}
-.empty{max-width:1100px;margin:40px auto;text-align:center;color:var(--md);font-size:13px}
-.view-tabs{max-width:1100px;margin:0 auto 16px;display:flex;gap:8px}
-.view-tab{background:#fff;border:1.5px solid var(--bd);color:var(--md);padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
-.view-tab.active{background:var(--dk);color:#fff;border-color:var(--dk)}
-.btn-sign{display:inline-block;background:var(--green);color:#fff;text-decoration:none;font-size:11px;font-weight:700;padding:5px 11px;border-radius:5px;white-space:nowrap}
-.btn-sign:hover{background:#1e8449}
-.btn-view{display:inline-block;background:#fff;color:var(--blue);border:1.3px solid var(--blue);text-decoration:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;white-space:nowrap}
-.btn-view:hover{background:#EAF2F8}
-.btn-relance{display:inline-block;background:#fff;color:#8a6d1d;border:1.3px solid var(--g);text-decoration:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;white-space:nowrap;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:4px}
-.btn-relance:hover{background:#FBF6E9}
-.btn-relance:disabled{opacity:.55;cursor:default;background:#fff}
-.action-cell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+
+.panel-grid{max-width:1800px;margin:0 auto;padding:0 4px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){
+  .panel-grid{grid-template-columns:1fr}
+  #sec-cp{order:1}
+  #sec-samedi{order:2}
+  #sec-var{order:3}
+  #sec-hsac{order:4}
+}
+.panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc)}
+.panel.expanded{grid-column:1/-1}
+.panel-face{padding:26px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer}
+.panel-face .n{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;line-height:1;color:var(--dk)}
+.panel-face .n.ok{color:var(--green)}
+.panel-face .l{font-size:12px;color:var(--md);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;max-width:260px}
+.panel-face .chev{font-size:16px;color:var(--md);transition:transform .15s;flex:0 0 auto}
+.panel.expanded .panel-face{padding:20px 24px 16px;border-bottom:1px solid var(--bd)}
+.panel.expanded .panel-face .n{font-size:24px}
+.panel.expanded .chev{transform:rotate(180deg)}
+.panel-detail{display:none}
+.panel.expanded .panel-detail{display:block;padding:16px 24px 22px}
+.panel-note{font-size:11px;color:#999;margin-bottom:10px}
+.panel-toolbar{display:flex;justify-content:flex-end;margin-bottom:6px}
+.panel-toolbar select{font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
+.tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:3px 8px;border-radius:5px;flex:0 0 auto;white-space:nowrap}
+.tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp{background:#FDEBD8;color:#a3560f}
+.tag.non_envoye{background:#FADBD8;color:#943126}
+.tag.complet{background:#D5F5E3;color:#1e7a45}
+.empty{color:var(--md);font-size:12.5px;padding:14px 0;text-align:center}
+
+.var-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;padding:6px 0 12px}
+.var-card{border-radius:10px;padding:14px 10px 12px;text-align:center;border:1.5px solid var(--bd);background:#FBFAF7}
+.var-card .code{font-family:'Playfair Display',serif;font-weight:700;font-size:16px;letter-spacing:.2px}
+.var-card .dir{font-size:11px;color:var(--md);margin-top:3px;line-height:1.3;min-height:28px}
+.var-card .badge{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:8px}
+.var-card .sig{font-size:10px;color:var(--md);margin-top:4px}
+.var-card.non_envoye{border-color:#F3C6B8;background:#FDF4F1}
+.var-card.non_envoye .badge{background:#FADBD8;color:#943126}
+.var-card.incomplet{border-color:#F6DCA8;background:#FEFAF0}
+.var-card.incomplet .badge{background:#FDEBD8;color:#a3560f}
+.var-card button{display:block;margin:8px auto 0;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--bd);background:#fff;color:var(--md);cursor:pointer;font-family:'DM Sans',sans-serif}
+.var-card button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
+.var-card button.relance{margin-top:6px;border-color:var(--blue);color:var(--blue)}
+.var-card button.relance:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.var-card button.relance:disabled{opacity:.55;cursor:default;background:#fff;color:var(--blue)}
+.var-card .portal{margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd)}
+.var-card .portal a{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:none}
+.var-card .portal a:hover{text-decoration:underline}
+.var-card .portal .pin{font-size:10px;color:var(--md);margin-top:3px}
+.var-card .portal .pin b{font-family:'Playfair Display',serif;letter-spacing:.15em;color:var(--dk);font-size:12px}
+.panel-toolbar select{margin-left:8px}
+.panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
+
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:6px 0 12px}
+.item-card{border-radius:10px;padding:14px 16px;border:1.5px solid var(--bd);background:#FEFAF0;display:flex;flex-direction:column;gap:7px}
+.item-card.non_envoye{border-color:#F3C6B8;background:#FDF4F1}
+.item-card .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.item-card .who{font-weight:700;font-size:14px;line-height:1.3}
+.item-card .tag{flex:0 0 auto}
+.item-card .meta{color:var(--md);font-size:12px;line-height:1.4}
+.item-card .since{color:#999;font-size:10.5px;margin-top:auto;padding-top:2px}
+.item-card button.relance{display:block;align-self:flex-start;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:'DM Sans',sans-serif}
+.item-card button.relance:hover{background:var(--blue);color:#fff}
+.item-card button.relance:disabled{opacity:.55;cursor:default;background:#fff;color:var(--blue)}
 </style>
 </head>
 <body>
 
+<div id="gate">
+  <div class="gate-box">
+    <h2>Tableau de bord RH</h2>
+    <p>Réservé au service RH — saisissez le code d'accès</p>
+    <input type="password" id="gatePin" placeholder="Code d'accès" maxlength="12">
+    <button type="button" onclick="tryGate()">Accéder</button>
+    <div id="gateErr"></div>
+  </div>
+</div>
+
+<div id="app">
+
 <div class="hdr">
   <div>
-    <h1>Suivi des demandes de congés</h1>
+    <h1>Tableau de bord RH — Groupe Edgard</h1>
     <div class="sub" id="lastUpdate">Chargement...</div>
   </div>
-  <button class="refresh" onclick="load()">↻ Actualiser</button>
+  <button class="refresh" onclick="loadAll()">↻ Actualiser</button>
 </div>
 
-<div id="gate" style="display:none;position:fixed;inset:0;background:#F2EFE8;z-index:50;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);max-width:360px;width:100%;padding:30px 26px;text-align:center">
-    <div style="font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px">Espace directeur</div>
-    <div style="font-size:12.5px;color:#666;margin-bottom:18px">Sélectionnez votre magasin et saisissez votre code directeur</div>
-    <select id="gateSoc" style="width:100%;padding:10px;border:1.5px solid #E0DCD0;border-radius:6px;margin-bottom:10px;font-size:13px"><option value="">— Choisir un magasin —</option></select>
-    <input type="password" id="gatePin" placeholder="Code directeur" style="width:100%;padding:10px;border:1.5px solid #E0DCD0;border-radius:6px;text-align:center;letter-spacing:.2em;font-size:15px;margin-bottom:10px" maxlength="6">
-    <button onclick="tryGate()" style="width:100%;padding:11px;background:#1A1A1A;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer">Accéder</button>
-    <div id="gateErr" style="color:#C0392B;font-size:12px;margin-top:10px;min-height:16px"></div>
-  </div>
-</div>
-
-<div id="app" style="display:block">
-
-<div class="view-tabs">
-  <button class="view-tab active" id="tabActives" onclick="switchView('actives')">📋 Demandes actives</button>
-  <button class="view-tab" id="tabHisto" onclick="switchView('histo')">🗂 Historique complet</button>
-</div>
-
-<div class="stats" id="stats"></div>
-
-<div class="filters">
-  <select id="fSoc" onchange="render()"><option value="">Toutes sociétés</option></select>
-  <select id="fStatut" onchange="render()">
-    <option value="">Tous statuts</option>
-    <option value="en_attente">En attente signature</option>
-    <option value="valide">Validé</option>
-    <option value="refuse">Refusé</option>
-  </select>
-  <input type="text" id="fSearch" placeholder="Rechercher un nom..." oninput="render()">
-</div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Collaborateur</th><th>Société</th><th>Type</th><th>Dates</th>
-      <th>Étape</th><th>En attente de</th><th>Statut</th><th>Dernière action</th><th>Action</th>
-    </tr>
-  </thead>
-  <tbody id="rows"></tbody>
-</table>
-<div class="empty" id="empty" style="display:none">Aucune demande trouvée.</div>
+<div class="panel-grid" id="panels"></div>
 
 </div>
 
 <script>
-// ⚠️ Remplacer par l'URL de votre webhook n8n "get-demandes"
-var N8N_URL = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-demandes';
-var N8N_RELANCE_CP = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
+/* ============================ CONFIG ============================ */
+var RH_CODE = 'Edgard37*'; // code d'accès partagé service RH
 
-// Memes codes que l'Espace directeur des portails Edgard et GdO
-var CODES_DIRECTEUR = {
-  "ANGO":"vv2ex3","BIARRO":"t5xaaa","BORDO":"ykubz3","CAENPO":"3cv3y9","GIRO":"yampws",
-  "HAVRO":"x663ra","JISAM":"8522mv","LYONO":"dtqhpr","MANSO":"2ar48z","MARSEILLO":"e8smvp",
-  "NANCEO":"253ruj","NANTO":"jy8bb8","NICEO":"s6w62v","ORLO":"8ty2t3","REIMO":"9demwu",
-  "STRABO":"z4jx7z","TURO":"c33acr",
-  "CHATO":"uuqjua","CHEMILLO":"qo6ut6","CHOLO":"5hrwdv","DUNES":"j7igxx","ECUME":"kdctla",
-  "FORMIO":"s4t20v","MARAIS":"ljcs5u","MUDO":"oses5i","NIORTO":"eoro9o"
-};
+var N8N_DEMANDES  = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-demandes';
+var N8N_VARIABLES = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-variables-paie';
+var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser-variable-paie';
+var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-relance-manuelle';
+var N8N_CP_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
+var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
+var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
+var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
+var VAR_PERIODE_DEBUT = '2026-09'; // premier mois suivi dans l'historique
 
-function normSoc(s){ return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z]/g,'').toUpperCase(); }
-
-var MODE_DIRECTEUR = new URLSearchParams(location.search).get('directeur') === '1';
-var LOCKED_SOCIETE = null; // code magasin normalise, une fois authentifie
-
-function initGate(){
-  var sel = document.getElementById('gateSoc');
-  Object.keys(CODES_DIRECTEUR).sort().forEach(function(code){
-    var o = document.createElement('option');
-    o.value = code; o.textContent = code;
-    sel.appendChild(o);
-  });
-  document.getElementById('gate').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
+var VAR_PORTAL_BASE = 'https://edgard-opticiens.github.io/variables/';
+var VAR_DATA_BASE = 'https://raw.githubusercontent.com/edgard-opticiens/variables/main/data/';
+var PIN_CACHE = {};
 
 function tryGate(){
-  var soc = document.getElementById('gateSoc').value;
   var pin = document.getElementById('gatePin').value.trim();
   var err = document.getElementById('gateErr');
-  if(!soc){ err.textContent = 'Choisissez votre magasin.'; return; }
-  if(!CODES_DIRECTEUR[soc] || CODES_DIRECTEUR[soc] !== pin){
-    err.textContent = 'Code incorrect.'; document.getElementById('gatePin').value=''; return;
-  }
-  LOCKED_SOCIETE = soc;
+  if (pin !== RH_CODE){ err.textContent = 'Code incorrect.'; document.getElementById('gatePin').value=''; return; }
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  load();
-  setInterval(load,60000);
+  loadAll();
+  setInterval(loadAll, 300000);
 }
+document.getElementById('gatePin').addEventListener('keydown', function(e){ if(e.key==='Enter') tryGate(); });
 
-var DATA = [];
-var ARCHIVE = [];
-var VIEW = 'actives';
-
-function switchView(v){
-  VIEW=v;
-  document.getElementById('tabActives').classList.toggle('active',v==='actives');
-  document.getElementById('tabHisto').classList.toggle('active',v==='histo');
-  render();
+/* ============================ HELPERS ============================ */
+function excelOrIsoDate(v){
+  if (v==='' || v===null || v===undefined) return null;
+  if (typeof v==='number' || /^\d+(\.\d+)?$/.test(v)) return new Date((Number(v)-25569)*86400000);
+  var d = new Date(v);
+  return isNaN(d) ? null : d;
 }
-
-function currentSet(){
-  if(VIEW==='actives')return DATA.filter(function(d){return d.etape!=='termine';});
-  // Historique : demandes terminées encore dans Suivi + tout l'archive, dédupliqué par id
-  var termineActives=DATA.filter(function(d){return d.etape==='termine';});
-  return dedupeLatest(termineActives.concat(ARCHIVE));
+function dedupeLatest(arr){
+  var byId = {};
+  arr.forEach(function(d){
+    var id = d.id;
+    if (!id){ byId[Math.random()] = d; return; }
+    if (!byId[id] || new Date(d.date_derniere_action) > new Date(byId[id].date_derniere_action)) byId[id] = d;
+  });
+  return Object.values(byId);
 }
-
-function etapeLabel(e){
-  return {collab:'Collaborateur',responsable:'Responsable',direction:'Direction',directeur:'Directeur',rh:'RH',termine:'Terminé'}[e]||e;
+function joursDepuis(dateVal){
+  var d = excelOrIsoDate(dateVal);
+  if (!d) return '';
+  var days = Math.floor((new Date() - d) / 86400000);
+  if (days <= 0) return 'aujourd\'hui';
+  if (days === 1) return 'depuis 1 jour';
+  return 'depuis ' + days + ' jours';
 }
+function fmtDate(dateVal){
+  var d = excelOrIsoDate(dateVal);
+  return d ? d.toLocaleDateString('fr-FR') : '';
+}
+function esc(s){ return (s||'').toString().replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
 function domId(s){ return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'_'); }
 function attrSafe(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-function actionCell(d){
-  if(d.statut!=='en_attente')return '-';
-  var parts=[];
-  if(d.lien){
-    if(d.etape==='directeur'){
-      // Lien de signature — pouvoir donné uniquement dans l'espace directeur (déjà protégé par code, verrouillé sur sa société)
-      if(LOCKED_SOCIETE) parts.push('<a class="btn-sign" href="'+d.lien+'" target="_blank" rel="noopener">✍️ Signer</a>');
-      else parts.push('<span style="color:var(--md);font-size:11px">En attente directeur</span>');
-    } else if(d.etape==='rh'){
-      // Lien de consultation (lecture seule, téléchargement PDF) — sans risque à afficher côté RH
-      parts.push('<a class="btn-view" href="'+d.lien+'" target="_blank" rel="noopener">📄 Consulter</a>');
-    }
+var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
+var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
+var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function periodesDisponibles(){
+  var parts = VAR_PERIODE_DEBUT.split('-');
+  var d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+  var now = new Date();
+  var cur = new Date(now.getFullYear(), now.getMonth(), 1);
+  var list = [];
+  while (d <= cur){
+    list.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+    d = new Date(d.getFullYear(), d.getMonth()+1, 1);
   }
-  if(d.en_attente_email){
-    parts.push('<button type="button" class="btn-relance" id="relance-'+domId(d.id)+'" onclick="relancerCP(\''+attrSafe(d.id)+'\')">✉️ Relancer</button>');
-  }
-  return parts.length ? '<div class="action-cell">'+parts.join('')+'</div>' : '-';
+  return list.reverse();
+}
+function libellePeriode(p){
+  var parts = p.split('-');
+  return MOIS_FR[Number(parts[1])-1] + ' ' + parts[0];
+}
+
+/* ============================ DONNEES ============================ */
+var STATE = { cp: [], variables: null, samedis: [], hs: [], acompte: [] };
+var VAR_PERIODE = null;
+
+function togglePanel(id){
+  document.getElementById(id).classList.toggle('expanded');
+}
+
+function renderCP(){
+  var pending = STATE.cp;
+  var filterEl = document.getElementById('cp-soc-filter');
+  var currentVal = filterEl.value;
+  var socsSeen = {};
+  var socs = [];
+  pending.forEach(function(d){
+    var s = d.societe || '';
+    if (s && !socsSeen[s]){ socsSeen[s] = true; socs.push(s); }
+  });
+  socs.sort();
+  filterEl.innerHTML = '<option value="">Toutes les sociétés (' + pending.length + ')</option>' + socs.map(function(s){
+    var cnt = pending.filter(function(d){ return d.societe === s; }).length;
+    return '<option value="' + esc(s) + '">' + esc(s) + ' (' + cnt + ')</option>';
+  }).join('');
+  if (socs.indexOf(currentVal) !== -1) filterEl.value = currentVal;
+  var activeSoc = filterEl.value;
+  var filtered = activeSoc ? pending.filter(function(d){ return d.societe === activeSoc; }) : pending;
+
+  var body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
+    var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
+    var type = esc(d.type || 'CP');
+    var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
+    var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
+    var relanceBtn = d.en_attente_email ? '<button type="button" class="relance" id="relance-cp-' + domId(d.id) + '" onclick="relancerCP(\'' + attrSafe(d.id) + '\')">✉️ Relancer</button>' : '';
+    return '<div class="item-card en_attente"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + type + '</span></div>' +
+      '<div class="meta">' + soc + ' — ' + dates + (attente ? '<br>' + attente : '') + '</div>' +
+      '<div class="since">' + joursDepuis(d.date_derniere_action) + '</div>' + relanceBtn + '</div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande' + (activeSoc ? ' pour ' + esc(activeSoc) : ' de CP ou d\'absence') + ' en attente.</div>';
+  document.getElementById('sec-cp').querySelector('.panel-body').innerHTML = body;
+  document.getElementById('cp-count').textContent = pending.length;
+  document.getElementById('cp-count').className = 'n' + (pending.length===0 ? ' ok' : '');
+}
+
+function renderVariables(){
+  var info = STATE.variables;
+  var box = document.getElementById('sec-var').querySelector('.panel-body');
+  var countEl = document.getElementById('var-count');
+  if (!info){ box.innerHTML = '<div class="empty">Chargement…</div>'; countEl.textContent = '…'; return; }
+  var pending = info.magasins.filter(function(m){ return m.statut !== 'complet'; });
+  var total = info.magasins.length;
+  countEl.textContent = (total - pending.length) + '/' + total;
+  countEl.className = 'n' + (pending.length===0 ? ' ok' : '');
+  var body = pending.length ? '<div class="var-grid">' + pending.map(function(m){
+    var tagCls = m.statut === 'non_envoye' ? 'non_envoye' : 'incomplet';
+    var tagTxt = m.statut === 'non_envoye' ? 'Non envoyée' : 'Incomplète';
+    var sig = m.statut === 'incomplet' ? '<div class="sig">' + m.signatures_ok + ' / ' + m.total_salaries + ' signés</div>' : '';
+    var portalUrl = VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(m.code);
+    var pinTxt = PIN_CACHE.hasOwnProperty(m.code) ? (PIN_CACHE[m.code] || '—') : '…';
+    return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
+      '<div class="dir">' + esc(m.directeur) + '</div>' +
+      '<span class="badge">' + tagTxt + '</span>' + sig +
+      '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>' +
+      '<button type="button" class="relance" id="relance-' + esc(m.code) + '" onclick="relancerVariable(\'' + esc(m.code) + '\',\'' + tagCls + '\',' + (m.signatures_ok||0) + ',' + (m.total_salaries||0) + ')">✉️ Relancer</button>' +
+      '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a>' +
+      '<div class="pin" id="pin-' + esc(m.code) + '">Code : <b>' + esc(pinTxt) + '</b></div></div>' +
+      '</div>';
+  }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
+  box.innerHTML = body;
+  loadPinsFor(pending.map(function(m){ return m.code; }));
+}
+
+function loadPinsFor(codes){
+  codes.forEach(function(code){
+    if (PIN_CACHE.hasOwnProperty(code)) return;
+    fetch(VAR_DATA_BASE + encodeURIComponent(code) + '.json', {cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        PIN_CACHE[code] = d && d.pin ? String(d.pin) : null;
+        var el = document.getElementById('pin-' + code);
+        if (el) el.innerHTML = 'Code : <b>' + esc(PIN_CACHE[code] || '—') + '</b>';
+      })
+      .catch(function(){
+        PIN_CACHE[code] = null;
+        var el = document.getElementById('pin-' + code);
+        if (el) el.innerHTML = 'Code : <b>—</b>';
+      });
+  });
+}
+
+function fetchVariables(periode){
+  return fetch(N8N_VARIABLES + '?periode=' + encodeURIComponent(periode))
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return null; })
+    .then(function(data){
+      STATE.variables = data && data.magasins ? data : null;
+      renderVariables();
+    });
+}
+function onVarPeriodeChange(){
+  VAR_PERIODE = document.getElementById('var-periode-select').value;
+  document.getElementById('sec-var').querySelector('.panel-body').innerHTML = '<div class="empty">Chargement…</div>';
+  fetchVariables(VAR_PERIODE);
+}
+function finaliserVariable(code){
+  if (!confirm('Marquer ' + code + ' comme finalisée pour ' + libellePeriode(VAR_PERIODE) + ', même sans toutes les signatures ?')) return;
+  var commentaire = prompt('Commentaire (optionnel) :', '') || '';
+  fetch(N8N_VAR_FINALIZE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ magasin_code: code, periode: VAR_PERIODE, finalise: true, finalise_par: 'RH', commentaire: commentaire })
+  }).then(function(){ fetchVariables(VAR_PERIODE); })
+    .catch(function(){ alert('Erreur lors de la finalisation — réessayez.'); });
+}
+
+function relancerVariable(code, statut, signaturesOk, totalSalaries){
+  var parts = (VAR_PERIODE || '').split('-');
+  var annee = Number(parts[0]) || new Date().getFullYear();
+  var moisTxt = MOIS_FR[Number(parts[1]) - 1] || '';
+  if (!confirm('Envoyer un e-mail de rappel au directeur de ' + code + ' pour ' + libellePeriode(VAR_PERIODE) + ' ?')) return;
+  var btn = document.getElementById('relance-' + code);
+  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  fetch(N8N_VAR_RELANCE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      code: code, magasin_nom: code, periode: VAR_PERIODE, moisTxt: moisTxt, annee: annee,
+      statut: statut, signatures_ok: signaturesOk, total_salaries: totalSalaries
+    })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        if (btn){ btn.textContent = '✔️ Envoyé'; }
+        setTimeout(function(){ if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; } }, 4000);
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de l'envoi de la relance — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de l'envoi de la relance — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+    });
 }
 
 function relancerCP(id){
-  var d = DATA.concat(ARCHIVE).filter(function(x){return x.id===id;})[0];
-  if(!d){ alert("Demande introuvable — actualisez le tableau et réessayez."); return; }
-  if(!confirm('Envoyer un e-mail de rappel à '+(d.en_attente_nom||'la personne en attente')+' pour la demande de '+(d.prenom||'')+' '+(d.nom||'')+' ?')) return;
-  var btn = document.getElementById('relance-'+domId(id));
-  if(btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
-  fetch(N8N_RELANCE_CP, {
+  var d = STATE.cp.filter(function(x){ return x.id === id; })[0];
+  if (!d){ alert("Demande introuvable — actualisez le tableau et réessayez."); return; }
+  if (!confirm('Envoyer un e-mail de rappel à ' + (d.en_attente_nom || 'la personne en attente') + ' pour la demande de ' + (d.prenom||'') + ' ' + (d.nom||'') + ' ?')) return;
+  var btn = document.getElementById('relance-cp-' + domId(id));
+  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  fetch(N8N_CP_RELANCE, {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       id: d.id, societe: d.societe, nom: d.nom, prenom: d.prenom, type: d.type,
@@ -216,136 +369,103 @@ function relancerCP(id){
       if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
     });
 }
-function statutBadge(s){
-  if(s==='valide')return '<span class="badge b-valide">Validé ✓</span>';
-  if(s==='refuse')return '<span class="badge b-refuse">Refusé</span>';
-  return '<span class="badge b-attente">En attente</span>';
-}
-function isLate(dateStr){
-  if(!dateStr)return false;
-  var diff=(Date.now()-new Date(dateStr).getTime())/3600000;
-  return diff>=48;
-}
-function fmtDate(d){
-  if(!d&&d!==0)return'-';
-  var dt;
-  if(typeof d==='number'||/^\d+(\.\d+)?$/.test(d)){
-    // Numéro de série Excel (jours depuis 1899-12-30)
-    dt=new Date((Number(d)-25569)*86400000);
-  }else{
-    dt=new Date(d);
-  }
-  if(isNaN(dt))return d;
-  return dt.toLocaleDateString('fr-FR')+' '+dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
+function renderSamedis(){
+  var pending = STATE.samedis;
+  var body = pending.length ? '<div class="item-grid">' + pending.map(function(s){
+    var who = esc(s.prenom) + ' ' + esc((s.nom||'').toUpperCase());
+    return '<div class="item-card reseau"><div class="top"><span class="who">' + who + '</span><span class="tag reseau">En attente</span></div>' +
+      '<div class="meta">' + esc(s.societe) + ' — samedi du ' + fmtDate(s.date_samedi || s.date) + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucun samedi tournant en attente.</div>';
+  document.getElementById('sec-samedi').querySelector('.panel-body').innerHTML = body;
+  document.getElementById('samedi-count').textContent = pending.length;
+  document.getElementById('samedi-count').className = 'n' + (pending.length===0 ? ' ok' : '');
 }
 
-function render(){
-  var fSocEl=document.getElementById('fSoc');
-  var soc=fSocEl?fSocEl.value:'';
-  var statut=document.getElementById('fStatut').value;
-  var search=document.getElementById('fSearch').value.toLowerCase();
-  var source=currentSet();
-
-  var filtered=source.filter(function(d){
-    if(LOCKED_SOCIETE){ if(normSoc(d.societe)!==LOCKED_SOCIETE) return false; }
-    else if(soc&&d.societe!==soc){ return false; }
-    if(statut&&d.statut!==statut)return false;
-    if(search&&!((d.nom||'')+' '+(d.prenom||'')).toLowerCase().includes(search))return false;
-    return true;
+function renderHsAc(){
+  var hs = STATE.hs.map(function(r){
+    return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
+      label: HS_ETAPE_LABEL[r.etape] || r.etape, type: 'Heures sup', maj: r.date_maj };
   });
-
-  // Stats
-  var activeOnly=DATA.filter(function(d){return d.etape!=='termine';}).filter(function(d){return !LOCKED_SOCIETE || normSoc(d.societe)===LOCKED_SOCIETE;});
-  var nAttente=activeOnly.filter(function(d){return d.statut==='en_attente'}).length;
-  var nRetard=activeOnly.filter(function(d){return d.statut==='en_attente'&&isLate(d.date_derniere_action)}).length;
-  if(VIEW==='actives'){
-    document.getElementById('stats').innerHTML=
-      '<div class="stat" style="border-color:#E67E22"><div class="n">'+nAttente+'</div><div class="l">En attente signature</div></div>'+
-      '<div class="stat" style="border-color:#C0392B"><div class="n">'+nRetard+'</div><div class="l">En retard (+48h)</div></div>'+
-      '<div class="stat" style="border-color:#C9A84C"><div class="n">'+activeOnly.length+'</div><div class="l">Total demandes actives</div></div>';
-  } else {
-    var sourceScoped = LOCKED_SOCIETE ? source.filter(function(d){return normSoc(d.societe)===LOCKED_SOCIETE;}) : source;
-    var archiveScoped = LOCKED_SOCIETE ? ARCHIVE.filter(function(d){return normSoc(d.societe)===LOCKED_SOCIETE;}) : ARCHIVE;
-    document.getElementById('stats').innerHTML=
-      '<div class="stat" style="border-color:#27AE60"><div class="n">'+sourceScoped.length+'</div><div class="l">Total historique</div></div>'+
-      '<div class="stat" style="border-color:#C9A84C"><div class="n">'+archiveScoped.length+'</div><div class="l">Dont archivées</div></div>';
-  }
-
-  var tbody=document.getElementById('rows');
-  if(!filtered.length){
-    tbody.innerHTML='';
-    document.getElementById('empty').style.display='block';
-    return;
-  }
-  document.getElementById('empty').style.display='none';
-
-  function isActionable(d){return LOCKED_SOCIETE&&d.etape==='directeur'&&d.statut==='en_attente'&&d.lien;}
-  filtered.sort(function(a,b){
-    var pa=isActionable(a)?1:0, pb=isActionable(b)?1:0;
-    if(pa!==pb)return pb-pa;
-    return new Date(b.date_derniere_action)-new Date(a.date_derniere_action);
+  var ac = STATE.acompte.map(function(r){
+    return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape,
+      label: AC_ETAPE_LABEL[r.etape] || r.etape, type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), maj: r.date_maj };
   });
-
-  tbody.innerHTML=filtered.map(function(d){
-    var late=d.statut==='en_attente'&&isLate(d.date_derniere_action);
-    var rowStyle=isActionable(d)?' style="background:#FFFBEA"':'';
-    return '<tr'+rowStyle+'>'+
-      '<td><strong>'+(d.prenom||'')+' '+(d.nom||'')+'</strong></td>'+
-      '<td>'+(d.societe||'-')+'</td>'+
-      '<td>'+(d.type||'-')+'</td>'+
-      '<td>'+fmtDate(d.date_debut).split(' ')[0]+(d.date_fin&&d.date_fin!==d.date_debut?' → '+fmtDate(d.date_fin).split(' ')[0]:'')+'</td>'+
-      '<td>'+etapeLabel(d.etape)+'</td>'+
-      '<td>'+(d.en_attente_nom||'-')+'</td>'+
-      '<td>'+statutBadge(d.statut)+'</td>'+
-      '<td class="'+(late?'retard':'')+'">'+fmtDate(d.date_derniere_action)+(late?' ⚠️':'')+'</td>'+
-      '<td>'+actionCell(d)+'</td>'+
-    '</tr>';
-  }).join('');
+  var all = hs.concat(ac);
+  var body = all.length ? '<div class="item-grid">' + all.map(function(r){
+    return '<div class="item-card ' + r.tag + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
+      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
+      '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
+  document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
+  document.getElementById('hsac-count').textContent = all.length;
+  document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
 }
 
-function dedupeLatest(arr){
-  var byId={};
-  arr.forEach(function(d){
-    var id=d.id;
-    if(!id)return;
-    if(!byId[id]||new Date(d.date_derniere_action)>new Date(byId[id].date_derniere_action)){
-      byId[id]=d;
-    }
+function buildPanels(){
+  document.getElementById('panels').innerHTML =
+    '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-cp\')"><div><div class="n" id="cp-count">0</div><div class="l">CP / absences en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><select id="cp-soc-filter" onchange="renderCP()"><option value="">Toutes les sociétés</option></select></div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="panel" id="sec-var" style="--pc:#2980B9">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-var\')"><div><div class="n" id="var-count">…</div><div class="l">Magasins variables paie à jour</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><span class="tb-label">Période :</span><select id="var-periode-select" onchange="onVarPeriodeChange()"></select></div>' +
+        '<div class="panel-note" id="var-note">Astuce : utilisez « Marquer finalisée » si une signature manquante ne viendra jamais.</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="panel" id="sec-samedi" style="--pc:#8E44AD">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-samedi\')"><div><div class="n" id="samedi-count">0</div><div class="l">Samedis tournants en attente (Edgard)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+    '</div>' +
+    '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+    '</div>';
+}
+
+function loadAll(){
+  document.getElementById('lastUpdate').textContent = 'Chargement...';
+  buildPanels();
+
+  var periodes = periodesDisponibles();
+  var sel = document.getElementById('var-periode-select');
+  sel.innerHTML = periodes.map(function(p){ return '<option value="' + p + '">' + libellePeriode(p) + '</option>'; }).join('');
+  if (!VAR_PERIODE || periodes.indexOf(VAR_PERIODE) === -1) VAR_PERIODE = periodes[0];
+  sel.value = VAR_PERIODE;
+
+  var pCP = fetch(N8N_DEMANDES).then(function(r){ return r.json(); }).catch(function(){ return { data: [], archive: [] }; });
+  var pSam = fetch(N8N_SAMEDIS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
+  var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
+  var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
+  var pVar = fetchVariables(VAR_PERIODE);
+
+  Promise.all([pCP, pSam, pHS, pAC, pVar]).then(function(results){
+    var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
+    var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
+    var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
+    STATE.cp = demandes.filter(function(d){ return d.statut === 'en_attente'; });
+
+    var samRaw = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
+    STATE.samedis = samRaw.filter(function(s){ return s.statut === 'en_attente'; });
+
+    STATE.hs = (results[2] && results[2].data) || [];
+    STATE.acompte = (results[3] && results[3].data) || [];
+
+    renderCP();
+    renderSamedis();
+    renderHsAc();
+
+    document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
+  }).catch(function(e){
+    document.getElementById('lastUpdate').textContent = 'Erreur de chargement — réessayez plus tard';
+    console.error(e);
   });
-  return Object.values(byId);
-}
-
-function load(){
-  document.getElementById('lastUpdate').textContent='Chargement...';
-  fetch(N8N_URL)
-    .then(function(r){return r.json();})
-    .then(function(data){
-      var raw=Array.isArray(data)?data:(data.data||[]);
-      var rawArchive=Array.isArray(data)?[]:(data.archive||[]);
-      DATA=dedupeLatest(raw);
-      ARCHIVE=dedupeLatest(rawArchive);
-      if(LOCKED_SOCIETE){
-        var socSel = document.getElementById('fSoc');
-        if(socSel) socSel.parentNode.removeChild(socSel);
-      } else {
-        var socs=[...new Set(DATA.concat(ARCHIVE).map(function(d){return d.societe;}).filter(Boolean))].sort();
-        var sel=document.getElementById('fSoc');
-        sel.innerHTML='<option value="">Toutes sociétés</option>'+socs.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join('');
-      }
-      document.getElementById('lastUpdate').textContent='Mis à jour le '+new Date().toLocaleString('fr-FR')+' ('+raw.length+' lignes, '+DATA.length+' demandes actives, '+ARCHIVE.length+' archivées)';
-      render();
-    })
-    .catch(function(e){
-      document.getElementById('lastUpdate').textContent='Erreur de chargement — vérifiez l\'URL n8n';
-      console.error(e);
-    });
-}
-
-if(MODE_DIRECTEUR){
-  initGate();
-} else {
-  load();
-  setInterval(load,60000); // auto-refresh toutes les 60s
 }
 </script>
 </body>
