@@ -26,26 +26,32 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .refresh{background:var(--dk);color:#fff;border:none;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
 .refresh:hover{background:#333}
 
-.panel-grid{max-width:1800px;margin:0 auto;padding:0 4px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel-grid{max-width:1800px;margin:0 auto;padding:0 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;align-items:start}
 @media(max-width:760px){
-  .panel-grid{grid-template-columns:1fr}
+  .panel-grid{grid-template-columns:repeat(2,1fr)}
   #sec-cp{order:1}
   #sec-samedi{order:2}
   #sec-var{order:3}
   #sec-hsac{order:4}
 }
-.panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc)}
-.panel.expanded{grid-column:1/-1}
-.panel-face{padding:26px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer}
-.panel-face .n{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;line-height:1;color:var(--dk)}
+.panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
+.panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
+.panel.expanded{grid-column:1/-1;cursor:default}
+.panel-face{padding:20px 18px 16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
+.panel-face .n{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;line-height:1;color:var(--dk)}
 .panel-face .n.ok{color:var(--green)}
-.panel-face .l{font-size:12px;color:var(--md);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;max-width:260px}
-.panel-face .chev{font-size:16px;color:var(--md);transition:transform .15s;flex:0 0 auto}
-.panel.expanded .panel-face{padding:20px 24px 16px;border-bottom:1px solid var(--bd)}
+.panel-face .l{font-size:10.5px;color:var(--md);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}
+.panel-face .chev{display:none;font-size:16px;color:var(--md);transition:transform .15s;flex:0 0 auto}
+.panel.expanded .panel-face{flex-direction:row;align-items:center;justify-content:space-between;text-align:left;padding:20px 24px 16px;border-bottom:1px solid var(--bd);gap:14px}
 .panel.expanded .panel-face .n{font-size:24px}
-.panel.expanded .chev{transform:rotate(180deg)}
+.panel.expanded .panel-face .l{margin-top:6px;max-width:260px}
+.panel.expanded .chev{display:block;transform:rotate(180deg)}
+.panel-preview{padding:0 16px 16px;display:flex;flex-direction:column;gap:4px;min-height:18px}
+.panel.expanded .panel-preview{display:none}
+.panel-preview .pv-item{font-size:10.5px;color:var(--md);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-preview .pv-more{font-size:10px;color:#aaa;font-style:italic}
 .panel-detail{display:none}
-.panel.expanded .panel-detail{display:block;padding:16px 24px 22px}
+.panel.expanded .panel-detail{display:block;padding:16px 24px 22px;cursor:default}
 .panel-note{font-size:11px;color:#999;margin-bottom:10px}
 .panel-toolbar{display:flex;justify-content:flex-end;margin-bottom:6px}
 .panel-toolbar select{font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
@@ -246,6 +252,9 @@ function renderCP(){
   document.getElementById('sec-cp').querySelector('.panel-body').innerHTML = body;
   document.getElementById('cp-count').textContent = pending.length;
   document.getElementById('cp-count').className = 'n' + (pending.length===0 ? ' ok' : '');
+  document.getElementById('cp-preview').innerHTML = previewHtml(pending.map(function(d){
+    return esc(d.prenom) + ' ' + esc((d.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(d.societe);
+  }));
 }
 
 function renderVariables(){
@@ -274,6 +283,10 @@ function renderVariables(){
   }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
   box.innerHTML = body;
   loadPinsFor(pending.map(function(m){ return m.code; }));
+  document.getElementById('var-preview').innerHTML = previewHtml(pending.map(function(m){
+    var t = m.statut === 'non_envoye' ? 'Non envoyée' : ('Incomplète ' + (m.signatures_ok||0) + '/' + (m.total_salaries||0));
+    return esc(m.code) + ' — ' + t;
+  }));
 }
 
 function loadPinsFor(codes){
@@ -414,6 +427,9 @@ function renderSamedis(){
   document.getElementById('sec-samedi').querySelector('.panel-body').innerHTML = body;
   document.getElementById('samedi-count').textContent = pending.length;
   document.getElementById('samedi-count').className = 'n' + (pending.length===0 ? ' ok' : '');
+  document.getElementById('samedi-preview').innerHTML = previewHtml(pending.map(function(s){
+    return esc(s.prenom) + ' ' + esc((s.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(s.societe);
+  }));
 }
 
 function renderHsAc(){
@@ -434,12 +450,16 @@ function renderHsAc(){
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
   document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
+  document.getElementById('hsac-preview').innerHTML = previewHtml(all.map(function(r){
+    return r.who + ' — ' + esc(r.type);
+  }));
 }
 
 function buildPanels(){
   document.getElementById('panels').innerHTML =
     '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-cp\')"><div><div class="n" id="cp-count">0</div><div class="l">CP / absences en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="cp-preview" onclick="togglePanel(\'sec-cp\')"></div>' +
       '<div class="panel-detail">' +
         '<div class="panel-toolbar"><select id="cp-soc-filter" onchange="renderCP()"><option value="">Toutes les sociétés</option></select></div>' +
         '<div class="panel-body"></div>' +
@@ -447,6 +467,7 @@ function buildPanels(){
     '</div>' +
     '<div class="panel" id="sec-var" style="--pc:#2980B9">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-var\')"><div><div class="n" id="var-count">…</div><div class="l">Magasins variables paie à jour</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="var-preview" onclick="togglePanel(\'sec-var\')"></div>' +
       '<div class="panel-detail">' +
         '<div class="panel-toolbar"><span class="tb-label">Période :</span><select id="var-periode-select" onchange="onVarPeriodeChange()"></select></div>' +
         '<div class="panel-note" id="var-note">Astuce : utilisez « Marquer finalisée » si une signature manquante ne viendra jamais.</div>' +
@@ -455,12 +476,21 @@ function buildPanels(){
     '</div>' +
     '<div class="panel" id="sec-samedi" style="--pc:#8E44AD">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-samedi\')"><div><div class="n" id="samedi-count">0</div><div class="l">Samedis tournants en attente (Edgard)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="samedi-preview" onclick="togglePanel(\'sec-samedi\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
     '</div>' +
     '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
     '</div>';
+}
+
+function previewHtml(lines){
+  if (!lines.length) return '<div class="pv-item" style="color:#bbb">Rien en attente</div>';
+  var shown = lines.slice(0, 2).map(function(t){ return '<div class="pv-item">' + t + '</div>'; }).join('');
+  var more = lines.length > 2 ? '<div class="pv-more">+ ' + (lines.length - 2) + ' autre' + (lines.length - 2 > 1 ? 's' : '') + '</div>' : '';
+  return shown + more;
 }
 
 function loadAll(){
