@@ -106,6 +106,8 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .item-card button.delete{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-family:'DM Sans',sans-serif}
 .item-card button.delete:hover{background:var(--red);color:#fff}
 .item-card button.delete:disabled{opacity:.55;cursor:default;background:#fff;color:var(--red)}
+.item-card a.consult{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none}
+.item-card a.consult:hover{background:var(--purple);color:#fff}
 </style>
 </head>
 <body>
@@ -251,10 +253,11 @@ function renderCP(){
     var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
     var relanceBtn = d.en_attente_email ? '<button type="button" class="relance" id="relance-cp-' + domId(d.id) + '" onclick="relancerCP(\'' + attrSafe(d.id) + '\')">✉️ Relancer</button>' : '';
     var deleteBtn = '<button type="button" class="delete" id="del-cp-' + domId(d.id) + '" onclick="supprimerCP(\'' + attrSafe(d.id) + '\')">🗑️ Supprimer</button>';
+    var consultBtn = d.lien ? '<a class="consult" href="' + esc(d.lien) + '" target="_blank" rel="noopener">👁️ Consulter</a>' : '';
     return '<div class="item-card en_attente" id="card-cp-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + type + '</span></div>' +
       '<div class="meta">' + soc + ' — ' + dates + (attente ? '<br>' + attente : '') + '</div>' +
       '<div class="since">' + joursDepuis(d.date_derniere_action) + '</div>' +
-      '<div class="btnrow">' + relanceBtn + deleteBtn + '</div></div>';
+      '<div class="btnrow">' + consultBtn + relanceBtn + deleteBtn + '</div></div>';
   }).join('') + '</div>' : '<div class="empty">Aucune demande' + (activeSoc ? ' pour ' + esc(activeSoc) : ' de CP ou d\'absence') + ' en attente.</div>';
   document.getElementById('sec-cp').querySelector('.panel-body').innerHTML = body;
   document.getElementById('cp-count').textContent = pending.length;
@@ -306,7 +309,7 @@ function renderVariables(){
 
   // Période passée : vue historique — tous les magasins, y compris ceux déjà complets/finalisés,
   // pour pouvoir revoir la fiche et retélécharger le PDF si besoin.
-  noteEl.textContent = 'Historique de ' + libellePeriode(info.periode) + ' — les fiches déjà signées peuvent être rouvertes et retéléchargées (bouton « 📄 Télécharger le PDF » dans le portail).';
+  noteEl.textContent = 'Historique de ' + libellePeriode(info.periode) + ' — les fiches déjà signées peuvent être rouvertes et retéléchargées (bouton « 📄 Télécharger le PDF » dans le portail). Pour un magasin non envoyé ou incomplet, « Marquer finalisée » clôture quand même la période.';
   var all = info.magasins;
   var body2 = all.length ? '<div class="var-grid">' + all.map(function(m){
     var tagCls = m.statut === 'complet' ? (m.finalise_manuel ? 'finalise' : 'complet') : (m.statut === 'non_envoye' ? 'non_envoye' : 'incomplet');
@@ -319,9 +322,15 @@ function renderVariables(){
       ? '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">🔎 Revoir / télécharger ↗</a>' +
         '<div class="pin" id="pin-' + esc(m.code) + '">Code : <b>' + esc(pinTxt) + '</b></div></div>'
       : '';
+    // Un magasin non envoyé/incomplet d'une période passée doit aussi pouvoir être
+    // clôturé manuellement — avant ce correctif, "Marquer finalisée" n'existait que
+    // sur la période en cours, ce qui bloquait le rattrapage des mois précédents.
+    var finaliserBtn = (m.statut !== 'complet')
+      ? '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>'
+      : '';
     return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
       '<div class="dir">' + esc(m.directeur) + '</div>' +
-      '<span class="badge">' + tagTxt + '</span>' + sig + finfo + revoirBtn +
+      '<span class="badge">' + tagTxt + '</span>' + sig + finfo + revoirBtn + finaliserBtn +
       '</div>';
   }).join('') + '</div>' : '<div class="empty">Aucune donnée pour ' + libellePeriode(info.periode) + '.</div>';
   box.innerHTML = body2;
