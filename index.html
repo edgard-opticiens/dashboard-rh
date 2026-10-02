@@ -34,6 +34,7 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
   #sec-var{order:3}
   #sec-hsac{order:4}
   #sec-soldes{order:5}
+  #sec-plannings{order:6}
 }
 .panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
 .panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
@@ -166,6 +167,7 @@ var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
+var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
 var SOLDES_FIN_PERIODE  = { y: 2027, m: 5 }; // fin de la periode CP en cours (01/06 -> 31/05) — a avancer d'un an chaque ete
 var VAR_PERIODE_DEBUT = '2026-07'; // premier mois suivi dans l'historique
@@ -244,6 +246,11 @@ function moisDeISO(iso){
   var mt = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
   return mt ? { y: Number(mt[1]), m: Number(mt[2]) } : null;
 }
+function fmtDateISO(iso){
+  var d = new Date(iso);
+  if (!iso || isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR');
+}
 
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
@@ -267,7 +274,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -715,6 +722,40 @@ function renderSoldes(){
   noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Les colonnes mensuelles (' + periodeTxt + ') indiquent, comme sur les espaces directeurs, les CP déjà posés via l\'outil digital mois par mois, du mois suivant l\'arrêté de chaque magasin jusqu\'à la fin de la période (31/05/2027) — ils sont déjà déduits du solde estimé pour ne pas compter deux fois les jours déjà pris. Ajustez le seuil pour repérer les situations à surveiller.';
 }
 
+function renderPlannings(){
+  var box = document.getElementById('sec-plannings').querySelector('.panel-body');
+  var dispo = STATE.plannings || [];
+  var manquants = STATE.planningsManquants || [];
+  var total = dispo.length + manquants.length;
+
+  document.getElementById('plannings-count').textContent = dispo.length + '/' + total;
+  document.getElementById('plannings-count').className = 'n' + (manquants.length === 0 ? ' ok' : '');
+  document.getElementById('plannings-preview').innerHTML = previewHtml(
+    manquants.slice().sort().map(function(m){ return esc(m) + ' — pas encore déposé'; })
+  );
+
+  if (!total){
+    box.innerHTML = '<div class="empty">Aucune donnée pour le moment.</div>';
+    return;
+  }
+
+  var cardsDispo = dispo.slice().sort(function(a,b){ return a.magasin.localeCompare(b.magasin); }).map(function(p){
+    var maj = fmtDateISO(p.lastModifiedDateTime);
+    return '<div class="var-card complet"><div class="code">' + esc(p.magasin) + '</div>' +
+      '<span class="badge">Disponible</span>' +
+      (maj ? '<div class="sig">Modifié le ' + esc(maj) + '</div>' : '') +
+      '<div class="portal"><a href="' + esc(p.webUrl) + '" target="_blank" rel="noopener">Ouvrir ↗</a></div>' +
+      '</div>';
+  }).join('');
+
+  var cardsManquants = manquants.slice().sort().map(function(m){
+    return '<div class="var-card non_envoye"><div class="code">' + esc(m) + '</div>' +
+      '<span class="badge">Pas encore déposé</span></div>';
+  }).join('');
+
+  box.innerHTML = '<div class="var-grid">' + cardsDispo + cardsManquants + '</div>';
+}
+
 function buildPanels(){
   document.getElementById('panels').innerHTML =
     '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
@@ -754,6 +795,14 @@ function buildPanels(){
         '<div class="panel-note" id="soldes-note"></div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
+    '</div>' +
+    '<div class="panel" id="sec-plannings" style="--pc:#1ABC9C">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-plannings\')"><div><div class="n" id="plannings-count">0</div><div class="l">Plannings apprentis disponibles</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="plannings-preview" onclick="togglePanel(\'sec-plannings\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-note" id="plannings-note">Accès direct à tous les plannings apprentis déposés sur OneDrive — pas besoin du code magasin.</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
     '</div>';
 }
 
@@ -779,9 +828,10 @@ function loadAll(){
   var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pSoldes = fetch(N8N_SOLDES).then(function(r){ return r.json(); }).catch(function(){ return { tout: {} }; });
+  var pPlannings = fetch(N8N_PLANNINGS).then(function(r){ return r.json(); }).catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
 
-  Promise.all([pCP, pSam, pHS, pAC, pSoldes, pVar]).then(function(results){
+  Promise.all([pCP, pSam, pHS, pAC, pSoldes, pPlannings, pVar]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -800,10 +850,14 @@ function loadAll(){
     STATE.soldesArretes = soldesParsed.arretes;
     STATE.soldesMois = soldesParsed.mois;
 
+    STATE.plannings = (results[5] && results[5].plannings) || [];
+    STATE.planningsManquants = (results[5] && results[5].magasinsManquants) || [];
+
     renderCP();
     renderSamedis();
     renderHsAc();
     renderSoldes();
+    renderPlannings();
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
   }).catch(function(e){
