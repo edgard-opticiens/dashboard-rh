@@ -561,8 +561,14 @@ function buildSoldesFlat(tout, futuresCP){
   var arretes = {};
   Object.keys(tout || {}).forEach(function(mag){
     var store = tout[mag];
-    if (!store || !store.historique || !store.historique.length) return;
-    var snap = store.historique.slice().sort(function(a,b){ return dparseFR(b.arrete) - dparseFR(a.arrete); })[0];
+    if (!store) return;
+    // Deux formats possibles pour un magasin : le nouveau (plusieurs instantanés dans
+    // "historique", on prend le plus récent) ou l'ancien (un instantané unique directement
+    // sur l'objet magasin — c'est le format produit par un dépôt frais depuis Cegid).
+    var snap = (store.historique && store.historique.length)
+      ? store.historique.slice().sort(function(a,b){ return dparseFR(b.arrete) - dparseFR(a.arrete); })[0]
+      : store;
+    if (!snap || !snap.etablissements) return;
     if (snap.arrete) arretes[snap.arrete] = true;
 
     // CP deja valides via l'outil digital depuis la date d'arrete de ce magasin : ils ne sont pas
