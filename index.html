@@ -167,6 +167,7 @@ var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-s
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
+var SOLDES_FIN_PERIODE  = { y: 2027, m: 5 }; // fin de la periode CP en cours (01/06 -> 31/05) — a avancer d'un an chaque ete
 var VAR_PERIODE_DEBUT = '2026-07'; // premier mois suivi dans l'historique
 
 var VAR_PORTAL_BASE = 'https://edgard-opticiens.github.io/variables/';
@@ -227,6 +228,23 @@ function fmtNum(v){
   return (Math.round(n*100)/100).toLocaleString('fr-FR');
 }
 
+var MOIS_ABBR = ['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
+function moisLabel(y, m){ return MOIS_ABBR[m-1] + ' ' + String(y).slice(2); }
+function moisKey(y, m){ return y + '-' + (m<10?'0':'') + m; }
+// Mois suivant (M+1) une date au format JJ/MM/AAAA — sert a demarrer le decompte des CP deja
+// poses juste apres le mois de l'arrete de chaque magasin, comme sur les espaces directeurs.
+function moisApres(dateFR){
+  var mt = String(dateFR||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!mt) return null;
+  var m = Number(mt[2]), y = Number(mt[3]);
+  m += 1; if (m > 12){ m = 1; y += 1; }
+  return { y: y, m: m };
+}
+function moisDeISO(iso){
+  var mt = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return mt ? { y: Number(mt[1]), m: Number(mt[2]) } : null;
+}
+
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
 var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -249,7 +267,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -559,6 +577,9 @@ function renderHsAc(){
 function buildSoldesFlat(tout, futuresCP){
   var out = [];
   var arretes = {};
+  var starts = []; // { y, m } — mois suivant l'arrete (M+1), un par magasin ayant des donnees
+  var stores = [];
+
   Object.keys(tout || {}).forEach(function(mag){
     var store = tout[mag];
     if (!store) return;
@@ -570,15 +591,42 @@ function buildSoldesFlat(tout, futuresCP){
       : store;
     if (!snap || !snap.etablissements) return;
     if (snap.arrete) arretes[snap.arrete] = true;
+    var debut = moisApres(snap.arrete);
+    if (debut) starts.push(debut);
+    stores.push({ mag: mag, snap: snap });
+  });
 
-    // CP deja valides via l'outil digital depuis la date d'arrete de ce magasin : ils ne sont pas
-    // encore deduits du solde "restant" de l'export paie (qui date de l'arrete), donc on les
-    // retranche ici pour obtenir un solde a jour — le meme principe que les badges "Xj pris"
-    // affiches dans l'outil des directeurs, mais directement integre au total.
+  // Grille de mois commune a tous les magasins : du plus ancien "mois suivant l'arrete" (M+1)
+  // jusqu'a la fin de la periode CP en cours — exactement la fenetre utilisee dans l'outil des
+  // directeurs (colonnes "Xj pris" par mois), ici calculee dynamiquement a partir des arretes reels.
+  var debutGrille = starts.length
+    ? starts.reduce(function(a,b){ return (a.y < b.y || (a.y === b.y && a.m <= b.m)) ? a : b; })
+    : SOLDES_FIN_PERIODE;
+  var mois = [];
+  var cy = debutGrille.y, cm = debutGrille.m;
+  while (cy < SOLDES_FIN_PERIODE.y || (cy === SOLDES_FIN_PERIODE.y && cm <= SOLDES_FIN_PERIODE.m)){
+    mois.push({ y: cy, m: cm, key: moisKey(cy, cm), label: moisLabel(cy, cm) });
+    cm += 1; if (cm > 12){ cm = 1; cy += 1; }
+    if (mois.length > 24) break; // garde-fou
+  }
+  var moisIndex = {};
+  mois.forEach(function(mm, i){ moisIndex[mm.key] = i; });
+
+  stores.forEach(function(st){
+    var mag = st.mag, snap = st.snap;
+
+    // CP deja valides via l'outil digital, repartis par mois (le backend n8n exclut deja tout ce
+    // qui est anterieur ou egal a la date d'arrete exacte de ce magasin — pas de risque de double
+    // comptage ici, on se contente de les ranger dans la bonne colonne de la grille commune).
     var posesParKey = {};
     ((futuresCP && futuresCP[mag]) || []).forEach(function(f){
+      var mi = moisDeISO(f.dateDebut);
+      if (!mi) return;
+      var idx = moisIndex[moisKey(mi.y, mi.m)];
+      if (idx === undefined) return; // hors de la grille (avant M+1 global ou apres la fin de periode)
       var k = normalizeNom((f.nom||'') + (f.prenom||''));
-      posesParKey[k] = (posesParKey[k] || 0) + Number(f.nbJours || 0);
+      if (!posesParKey[k]) posesParKey[k] = mois.map(function(){ return 0; });
+      posesParKey[k][idx] += Number(f.nbJours || 0);
     });
 
     (snap.etablissements || []).forEach(function(et){
@@ -587,17 +635,18 @@ function buildSoldesFlat(tout, futuresCP){
         var n1 = s.n1 || {}, n = s.n || {};
         var n1Restant = Number(n1.restant || 0), nRestant = Number(n.restant || 0);
         var totalBrut = report + n1Restant + nRestant;
-        var poses = posesParKey[normalizeNom(s.nom)] || 0;
+        var mensuel = posesParKey[normalizeNom(s.nom)] || mois.map(function(){ return 0; });
+        var poses = mensuel.reduce(function(acc, v){ return acc + v; }, 0);
         out.push({
           magasin: mag, nom: s.nom || '', matricule: s.matricule || '',
           report: report, n1Restant: n1Restant, nRestant: nRestant,
-          totalBrut: totalBrut, poses: poses, total: totalBrut - poses,
+          totalBrut: totalBrut, mensuel: mensuel, poses: poses, total: totalBrut - poses,
           arrete: snap.arrete || ''
         });
       });
     });
   });
-  return { list: out, arretes: Object.keys(arretes).sort(function(a,b){ return dparseFR(b)-dparseFR(a); }) };
+  return { list: out, arretes: Object.keys(arretes).sort(function(a,b){ return dparseFR(b)-dparseFR(a); }), mois: mois };
 }
 
 function renderSoldes(){
@@ -626,21 +675,26 @@ function renderSoldes(){
     return true;
   }).sort(function(a,b){ return b.total - a.total; });
 
+  var mois = STATE.soldesMois || [];
   var box = document.getElementById('sec-soldes').querySelector('.panel-body');
   if (!filtered.length){
     box.innerHTML = '<div class="empty">Aucun salarié' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + (search ? ' pour « ' + esc(search) + ' »' : '') + '.</div>';
   } else {
+    var moisHeaders = mois.map(function(mm){ return '<th>' + esc(mm.label) + '</th>'; }).join('');
     box.innerHTML = '<div class="soldes-wrap"><table class="soldes-table"><thead><tr>' +
-      '<th>Salarié</th><th>Magasin</th><th>Antérieur</th><th>Restant N-1</th><th>Restant N</th><th>Posés depuis l\'arrêté</th><th>Solde estimé</th><th>Arrêté au</th>' +
+      '<th>Salarié</th><th>Magasin</th><th>Antérieur</th><th>Restant N-1</th><th>Restant N</th>' + moisHeaders + '<th>Solde estimé</th><th>Arrêté au</th>' +
       '</tr></thead><tbody>' + filtered.map(function(d){
         var isAlert = seuil > 0 && d.total >= seuil;
+        var moisCells = (d.mensuel || mois.map(function(){ return 0; })).map(function(v){
+          return '<td class="poses">' + (v > 0 ? '− ' + fmtNum(v) : '—') + '</td>';
+        }).join('');
         return '<tr' + (isAlert ? ' class="alert"' : '') + '>' +
           '<td class="who">' + esc(d.nom) + '</td>' +
           '<td>' + esc(d.magasin) + '</td>' +
           '<td>' + fmtNum(d.report) + '</td>' +
           '<td>' + fmtNum(d.n1Restant) + '</td>' +
           '<td>' + fmtNum(d.nRestant) + '</td>' +
-          '<td class="poses">' + (d.poses > 0 ? '− ' + fmtNum(d.poses) : '—') + '</td>' +
+          moisCells +
           '<td class="total">' + fmtNum(d.total) + ' j</td>' +
           '<td>' + esc(d.arrete) + '</td>' +
         '</tr>';
@@ -657,7 +711,8 @@ function renderSoldes(){
   );
   var noteEl = document.getElementById('soldes-note');
   var arretesTxt = STATE.soldesArretes.length ? STATE.soldesArretes.join(', ') : '—';
-  noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Le solde estimé déduit automatiquement les CP déjà posés via l\'outil digital depuis la date d\'arrêté de chaque magasin (comme les jours « déjà pris » affichés chez les directeurs), pour ne pas surveiller un solde déjà entamé. Ajustez le seuil pour repérer les situations à surveiller.';
+  var periodeTxt = mois.length ? (mois[0].label + ' à ' + mois[mois.length-1].label) : '—';
+  noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Les colonnes mensuelles (' + periodeTxt + ') indiquent, comme sur les espaces directeurs, les CP déjà posés via l\'outil digital mois par mois, du mois suivant l\'arrêté de chaque magasin jusqu\'à la fin de la période (31/05/2027) — ils sont déjà déduits du solde estimé pour ne pas compter deux fois les jours déjà pris. Ajustez le seuil pour repérer les situations à surveiller.';
 }
 
 function buildPanels(){
@@ -743,6 +798,7 @@ function loadAll(){
     var soldesParsed = buildSoldesFlat((results[4] && results[4].tout) || {}, (results[4] && results[4].futuresCP) || {});
     STATE.soldes = soldesParsed.list;
     STATE.soldesArretes = soldesParsed.arretes;
+    STATE.soldesMois = soldesParsed.mois;
 
     renderCP();
     renderSamedis();
