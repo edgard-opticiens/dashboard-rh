@@ -33,6 +33,7 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
   #sec-samedi{order:2}
   #sec-var{order:3}
   #sec-hsac{order:4}
+  #sec-soldes{order:5}
 }
 .panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
 .panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
@@ -109,6 +110,20 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .item-card button.delete:disabled{opacity:.55;cursor:default;background:#fff;color:var(--red)}
 .item-card a.consult{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none}
 .item-card a.consult:hover{background:var(--purple);color:#fff}
+
+.panel-toolbar input[type=number],.panel-toolbar input[type=text]{font-family:'DM Sans',sans-serif;font-size:12.5px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);width:90px}
+.panel-toolbar input[type=text]{width:160px}
+.soldes-wrap{overflow-x:auto}
+.soldes-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px}
+.soldes-table th{background:var(--dk);color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;text-align:left;white-space:nowrap}
+.soldes-table td{padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.soldes-table tr:last-child td{border-bottom:none}
+.soldes-table tr:hover td{background:var(--lt)}
+.soldes-table tr.alert td{background:#FDF0EE}
+.soldes-table tr.alert td.total{color:var(--red)}
+.soldes-table td.total{font-weight:700}
+.soldes-table td.who{font-weight:600}
+.soldes-table td.poses{color:var(--blue)}
 </style>
 </head>
 <body>
@@ -150,6 +165,8 @@ var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-su
 var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
+var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
+var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
 var VAR_PERIODE_DEBUT = '2026-07'; // premier mois suivi dans l'historique
 
 var VAR_PORTAL_BASE = 'https://edgard-opticiens.github.io/variables/';
@@ -198,6 +215,17 @@ function fmtDate(dateVal){
 function esc(s){ return (s||'').toString().replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
 function domId(s){ return String(s||'').replace(/[^a-zA-Z0-9_-]/g,'_'); }
 function attrSafe(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function dparseFR(s){
+  var m = String(s||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? new Date(+m[3], +m[2]-1, +m[1]).getTime() : 0;
+}
+function normalizeNom(s){
+  return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z]/g,'').toUpperCase();
+}
+function fmtNum(v){
+  var n = Number(v)||0;
+  return (Math.round(n*100)/100).toLocaleString('fr-FR');
+}
 
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
@@ -221,7 +249,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -528,6 +556,104 @@ function renderHsAc(){
   }));
 }
 
+function buildSoldesFlat(tout, futuresCP){
+  var out = [];
+  var arretes = {};
+  Object.keys(tout || {}).forEach(function(mag){
+    var store = tout[mag];
+    if (!store || !store.historique || !store.historique.length) return;
+    var snap = store.historique.slice().sort(function(a,b){ return dparseFR(b.arrete) - dparseFR(a.arrete); })[0];
+    if (snap.arrete) arretes[snap.arrete] = true;
+
+    // CP deja valides via l'outil digital depuis la date d'arrete de ce magasin : ils ne sont pas
+    // encore deduits du solde "restant" de l'export paie (qui date de l'arrete), donc on les
+    // retranche ici pour obtenir un solde a jour — le meme principe que les badges "Xj pris"
+    // affiches dans l'outil des directeurs, mais directement integre au total.
+    var posesParKey = {};
+    ((futuresCP && futuresCP[mag]) || []).forEach(function(f){
+      var k = normalizeNom((f.nom||'') + (f.prenom||''));
+      posesParKey[k] = (posesParKey[k] || 0) + Number(f.nbJours || 0);
+    });
+
+    (snap.etablissements || []).forEach(function(et){
+      (et.salaries || []).forEach(function(s){
+        var report = Number(s.report || 0);
+        var n1 = s.n1 || {}, n = s.n || {};
+        var n1Restant = Number(n1.restant || 0), nRestant = Number(n.restant || 0);
+        var totalBrut = report + n1Restant + nRestant;
+        var poses = posesParKey[normalizeNom(s.nom)] || 0;
+        out.push({
+          magasin: mag, nom: s.nom || '', matricule: s.matricule || '',
+          report: report, n1Restant: n1Restant, nRestant: nRestant,
+          totalBrut: totalBrut, poses: poses, total: totalBrut - poses,
+          arrete: snap.arrete || ''
+        });
+      });
+    });
+  });
+  return { list: out, arretes: Object.keys(arretes).sort(function(a,b){ return dparseFR(b)-dparseFR(a); }) };
+}
+
+function renderSoldes(){
+  var filterEl = document.getElementById('soldes-soc-filter');
+  var seuilEl = document.getElementById('soldes-seuil');
+  var searchEl = document.getElementById('soldes-search');
+  var seuil = Number(seuilEl.value) || 0;
+
+  var socsSeen = {}, socs = [];
+  STATE.soldes.forEach(function(d){
+    if (d.magasin && !socsSeen[d.magasin]){ socsSeen[d.magasin] = true; socs.push(d.magasin); }
+  });
+  socs.sort();
+  var currentVal = filterEl.value;
+  filterEl.innerHTML = '<option value="">Tous les magasins (' + STATE.soldes.length + ')</option>' + socs.map(function(s){
+    var cnt = STATE.soldes.filter(function(d){ return d.magasin === s; }).length;
+    return '<option value="' + esc(s) + '">' + esc(s) + ' (' + cnt + ')</option>';
+  }).join('');
+  if (socs.indexOf(currentVal) !== -1) filterEl.value = currentVal;
+  var activeSoc = filterEl.value;
+  var search = (searchEl.value || '').toLowerCase().trim();
+
+  var filtered = STATE.soldes.filter(function(d){
+    if (activeSoc && d.magasin !== activeSoc) return false;
+    if (search && d.nom.toLowerCase().indexOf(search) === -1) return false;
+    return true;
+  }).sort(function(a,b){ return b.total - a.total; });
+
+  var box = document.getElementById('sec-soldes').querySelector('.panel-body');
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty">Aucun salarié' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + (search ? ' pour « ' + esc(search) + ' »' : '') + '.</div>';
+  } else {
+    box.innerHTML = '<div class="soldes-wrap"><table class="soldes-table"><thead><tr>' +
+      '<th>Salarié</th><th>Magasin</th><th>Antérieur</th><th>Restant N-1</th><th>Restant N</th><th>Posés depuis l\'arrêté</th><th>Solde estimé</th><th>Arrêté au</th>' +
+      '</tr></thead><tbody>' + filtered.map(function(d){
+        var isAlert = seuil > 0 && d.total >= seuil;
+        return '<tr' + (isAlert ? ' class="alert"' : '') + '>' +
+          '<td class="who">' + esc(d.nom) + '</td>' +
+          '<td>' + esc(d.magasin) + '</td>' +
+          '<td>' + fmtNum(d.report) + '</td>' +
+          '<td>' + fmtNum(d.n1Restant) + '</td>' +
+          '<td>' + fmtNum(d.nRestant) + '</td>' +
+          '<td class="poses">' + (d.poses > 0 ? '− ' + fmtNum(d.poses) : '—') + '</td>' +
+          '<td class="total">' + fmtNum(d.total) + ' j</td>' +
+          '<td>' + esc(d.arrete) + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  var overSeuil = STATE.soldes.filter(function(d){ return seuil > 0 && d.total >= seuil; });
+  document.getElementById('soldes-count').textContent = overSeuil.length;
+  document.getElementById('soldes-count').className = 'n' + (overSeuil.length === 0 ? ' ok' : '');
+  document.getElementById('soldes-preview').innerHTML = previewHtml(
+    overSeuil.slice().sort(function(a,b){ return b.total - a.total; }).map(function(d){
+      return esc(d.nom) + ' — ' + esc(d.magasin) + ' (' + fmtNum(d.total) + ' j)';
+    })
+  );
+  var noteEl = document.getElementById('soldes-note');
+  var arretesTxt = STATE.soldesArretes.length ? STATE.soldesArretes.join(', ') : '—';
+  noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Le solde estimé déduit automatiquement les CP déjà posés via l\'outil digital depuis la date d\'arrêté de chaque magasin (comme les jours « déjà pris » affichés chez les directeurs), pour ne pas surveiller un solde déjà entamé. Ajustez le seuil pour repérer les situations à surveiller.';
+}
+
 function buildPanels(){
   document.getElementById('panels').innerHTML =
     '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
@@ -556,6 +682,17 @@ function buildPanels(){
       '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
+    '</div>' +
+    '<div class="panel" id="sec-soldes" style="--pc:#C0392B">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-soldes\')"><div><div class="n" id="soldes-count">0</div><div class="l">Soldes CP importants (Edgard + GdO)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="soldes-preview" onclick="togglePanel(\'sec-soldes\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><span class="tb-label">Seuil (jours) :</span><input type="number" id="soldes-seuil" value="' + SOLDES_SEUIL_DEFAUT + '" min="0" step="1" oninput="renderSoldes()">' +
+        '<input type="text" id="soldes-search" placeholder="Rechercher un salarié..." oninput="renderSoldes()">' +
+        '<select id="soldes-soc-filter" onchange="renderSoldes()"><option value="">Tous les magasins</option></select></div>' +
+        '<div class="panel-note" id="soldes-note"></div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
     '</div>';
 }
 
@@ -580,9 +717,10 @@ function loadAll(){
   var pSam = fetch(N8N_SAMEDIS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
+  var pSoldes = fetch(N8N_SOLDES).then(function(r){ return r.json(); }).catch(function(){ return { tout: {} }; });
   var pVar = fetchVariables(VAR_PERIODE);
 
-  Promise.all([pCP, pSam, pHS, pAC, pVar]).then(function(results){
+  Promise.all([pCP, pSam, pHS, pAC, pSoldes, pVar]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -596,9 +734,14 @@ function loadAll(){
     STATE.hs = (results[2] && results[2].data) || [];
     STATE.acompte = (results[3] && results[3].data) || [];
 
+    var soldesParsed = buildSoldesFlat((results[4] && results[4].tout) || {}, (results[4] && results[4].futuresCP) || {});
+    STATE.soldes = soldesParsed.list;
+    STATE.soldesArretes = soldesParsed.arretes;
+
     renderCP();
     renderSamedis();
     renderHsAc();
+    renderSoldes();
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
   }).catch(function(e){
