@@ -118,6 +118,8 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .ebub.cp-attente{background:#E3F5E9;color:#1e7a45;border:1px dashed var(--green)}
 .ebub.abs-valide{background:var(--orange);color:#fff;font-weight:600}
 .ebub.abs-attente{background:#FDEBD8;color:#a3560f;border:1px dashed var(--orange)}
+.ebub.rtt-valide{background:var(--blue);color:#fff;font-weight:600}
+.ebub.rtt-attente{background:#DCEAF5;color:#1c5983;border:1px dashed var(--blue)}
 .ebub.more{background:none;color:var(--md);font-weight:700;padding:1.5px 2px}
 .edots{display:none;gap:2px;flex-wrap:wrap;margin-top:2px}
 .edots span{width:6px;height:6px;border-radius:50%;display:inline-block}
@@ -126,6 +128,30 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .edot.cp-attente{background:#E3F5E9;border:1.5px solid var(--green)}
 .edot.abs-valide{background:var(--orange)}
 .edot.abs-attente{background:#FDEBD8;border:1.5px solid var(--orange)}
+.edot.rtt-valide{background:var(--blue)}
+.edot.rtt-attente{background:#DCEAF5;border:1.5px solid var(--blue)}
+.eform{margin-bottom:14px;background:var(--lt);border:1px solid var(--bd);border-radius:10px;padding:10px 16px}
+.eform summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--dk)}
+.eform-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px;margin-top:12px;align-items:end}
+.eform label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--md);margin-bottom:3px}
+.eform select,.eform input[type=text],.eform input[type=date]{width:100%;font-family:'DM Sans',sans-serif;font-size:12.5px;padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk)}
+.eform .full{grid-column:1/-1}
+.eform-actions{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.eform button.save{font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:700;padding:8px 18px;border:none;border-radius:7px;background:var(--dk);color:#fff;cursor:pointer}
+.eform button.save:disabled{opacity:.55;cursor:default}
+.eform .msg{font-size:12px}
+.eform .msg.ok{color:#1e7a45}.eform .msg.err{color:var(--red)}
+.eform .hint{font-size:11px;color:#999;margin-top:8px}
+.emanual{margin-top:14px}
+.emanual h4{font-family:'Playfair Display',serif;font-size:14px;margin-bottom:6px}
+.emanual .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px;flex-wrap:wrap}
+.emanual .row:last-child{border-bottom:none}
+.emanual .who{font-weight:700}
+.emanual .meta{color:var(--md);font-size:11.5px;flex:1 1 200px}
+.emanual button.del{font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-family:'DM Sans',sans-serif}
+.emanual button.del:hover{background:var(--red);color:#fff}
+.emanual button.del:disabled{opacity:.55;cursor:default}
+.ebadge{font-size:9px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:2px 7px;border-radius:5px;background:#EEE;color:#666}
 .edetail{margin-top:12px;background:var(--lt);border:1px solid var(--bd);border-radius:10px;padding:14px 18px}
 .edetail h3{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:8px;text-transform:capitalize}
 .edetail .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px}
@@ -214,6 +240,7 @@ var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-su
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
+var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
 var SOLDES_FIN_PERIODE  = { y: 2027, m: 5 }; // fin de la periode CP en cours (01/06 -> 31/05) — a avancer d'un an chaque ete
@@ -321,7 +348,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevManuel: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -856,7 +883,7 @@ function buildPanels(){
       '<div class="panel-face" onclick="togglePanel(\'sec-edev\')"><div><div class="n" id="edev-count">0</div><div class="l">Edgard Développement — absents aujourd\'hui</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="edev-preview" onclick="togglePanel(\'sec-edev\')"></div>' +
       '<div class="panel-detail">' +
-        '<div class="panel-note">Planning de toutes les demandes d\'Edgard Développement (congés payés, absences) — validées et en attente, comme sur les espaces directeurs.</div>' +
+        '<div class="panel-note">Planning de toutes les demandes d\'Edgard Développement (congés payés, RTT, absences) — validées, déjà traitées par la RH ou en attente — plus les saisies manuelles.</div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
@@ -866,32 +893,57 @@ function buildPanels(){
 var EDEV_CUR = null;   // 1er du mois affiche
 var EDEV_SEL = null;   // 'YYYY-MM-DD' du jour ouvert dans le detail
 var EDEV_MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+var EDEV_TYPES = [ ['CP','Congés payés'], ['RTT','RTT'], ['Evt Fam','Événement familial'], ['CSS','CSS'], ['ANR','ANR'], ['Maladie','Maladie / arrêt'], ['Autre absence','Autre absence'] ];
+var EDEV_PERIODES = ['Journée entière','Matin','Après-midi'];
+var EDEV_FORM = { open: false, who: '', nom: '', prenom: '', type: 'CP', periode: 'Journée entière', d1: '', d2: '', comment: '', msg: '', err: false, busy: false };
 
 function edevKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function edevShort(prenom, nom){
   prenom = (prenom||'').trim(); nom = (nom||'').trim();
   return prenom + (nom ? ' ' + nom.charAt(0).toUpperCase() + '.' : '');
 }
-function edevIsAbs(t){ return /ABS/.test(String(t||'').toUpperCase()); }
 function edevDay(v){
   var d = excelOrIsoDate(v);
   if (!d) return null;
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
-function edevCls(c){ return (edevIsAbs(c.type) ? 'abs' : 'cp') + (c.statut === 'valide' ? '-valide' : '-attente'); }
-function edevLib(c){ return (c.type || (edevIsAbs(c.type) ? 'Absence' : 'Congé payé')) + (c.statut === 'valide' ? ' — validé' : ' — en attente'); }
+function edevIsoDay(s){
+  var m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+}
+// Categorie d'affichage : cp (vert), rtt (bleu), abs (orange)
+function edevCat(c){
+  if (c.type === 'RTT') return 'rtt';
+  if (c.type === 'CP') return 'cp';
+  return /ABS/.test(String(c.type||'').toUpperCase()) || c.manual ? 'abs' : 'cp';
+}
+function edevIsValide(c){ return c.statut !== 'en_attente'; }
+function edevCls(c){ return edevCat(c) + (edevIsValide(c) ? '-valide' : '-attente'); }
+function edevTypeLib(c){
+  if (c.manual){
+    var t = EDEV_TYPES.filter(function(x){ return x[0] === c.type; })[0];
+    return t ? t[1] : c.type;
+  }
+  var u = String(c.type||'').toUpperCase();
+  return u === 'CP' ? 'Congés payés' : (u === 'ABS' ? 'Absence' : (u === 'CP+ABS' ? 'CP + absence' : (c.type || 'Demande')));
+}
+function edevLib(c){
+  return edevTypeLib(c) + (c.periode && c.periode !== 'Journée entière' ? ' (' + c.periode.toLowerCase() + ')' : '') +
+    (edevIsValide(c) ? ' — validé' : ' — en attente') + (c.manual ? ' · saisie manuelle' : '');
+}
+function edevItems(){ return STATE.edev.concat(STATE.edevManuel); }
 
 function edevBuildMap(){
   var y = EDEV_CUR.getFullYear(), m = EDEV_CUR.getMonth();
   var ms = new Date(y, m, 1), me = new Date(y, m+1, 0);
   var map = {};
-  STATE.edev.forEach(function(c){
+  edevItems().forEach(function(c){
     var fin = c.fin || c.debut;
     if (fin < ms || c.debut > me) return;
     var d = new Date(Math.max(c.debut, ms)), last = new Date(Math.min(fin, me));
     while (d <= last){
       var k = edevKey(d);
-      (map[k] = map[k] || []).push({ cls: edevCls(c), label: edevShort(c.prenom, c.nom), nom: c.nom, prenom: c.prenom, lib: edevLib(c) });
+      (map[k] = map[k] || []).push({ cls: edevCls(c), label: edevShort(c.prenom, c.nom), nom: c.nom, prenom: c.prenom, lib: edevLib(c), comment: c.comment || '' });
       d.setDate(d.getDate() + 1);
     }
   });
@@ -902,17 +954,130 @@ function edevShift(n){ EDEV_CUR = new Date(EDEV_CUR.getFullYear(), EDEV_CUR.getM
 function edevToday(){ var t = new Date(); EDEV_CUR = new Date(t.getFullYear(), t.getMonth(), 1); EDEV_SEL = null; renderEdev(); }
 function edevSelect(k){ EDEV_SEL = (EDEV_SEL === k ? null : k); renderEdev(); }
 
+/* --- Saisies manuelles (absences / demandes faites a la main avant le nouveau process) --- */
+function edevApi(body){
+  return fetch(N8N_EDEV_SAISIES, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); });
+}
+function edevLoadManual(){
+  return edevApi({ action: 'list' }).then(function(res){
+    STATE.edevManuel = ((res && res.data) || []).map(function(r){
+      var debut = edevIsoDay(r.date_debut);
+      return { id: r.id, nom: r.nom, prenom: r.prenom, type: r.type, periode: r.periode || '', comment: r.commentaire || '',
+               statut: 'valide', manual: true, debut: debut, fin: edevIsoDay(r.date_fin) || debut, saisi_le: r.saisi_le };
+    }).filter(function(c){ return c.debut; });
+  }).catch(function(){ STATE.edevManuel = STATE.edevManuel || []; });
+}
+function edevPeople(){
+  var seen = {}, list = [];
+  edevItems().forEach(function(c){
+    var k = normalizeNom(c.nom) + '|' + normalizeNom(c.prenom);
+    if (!normalizeNom(c.nom) || seen[k]) return;
+    seen[k] = true;
+    list.push({ nom: c.nom, prenom: c.prenom });
+  });
+  list.sort(function(a,b){ return (a.nom + a.prenom).toLowerCase() < (b.nom + b.prenom).toLowerCase() ? -1 : 1; });
+  return list;
+}
+function edevF(field, val){ EDEV_FORM[field] = val; }
+function edevFormWho(val){
+  EDEV_FORM.who = val;
+  var box = document.getElementById('edev-autre');
+  if (box) box.style.display = val === '__autre' ? '' : 'none';
+}
+function edevFormD1(val){
+  EDEV_FORM.d1 = val;
+  var d2 = document.getElementById('edev-f-d2');
+  if (d2 && (!EDEV_FORM.d2 || EDEV_FORM.d2 < val)){ EDEV_FORM.d2 = val; d2.value = val; }
+}
+function edevSetMsg(msg, err){
+  EDEV_FORM.msg = msg; EDEV_FORM.err = !!err;
+  var el = document.getElementById('edev-msg');
+  if (el){ el.textContent = msg; el.className = 'msg ' + (err ? 'err' : 'ok'); }
+}
+function edevSave(){
+  var f = EDEV_FORM, nom, prenom;
+  if (f.who === '__autre'){ nom = (f.nom||'').trim(); prenom = (f.prenom||'').trim(); }
+  else if (f.who !== ''){ var p = edevPeople()[Number(f.who)]; nom = p && p.nom; prenom = p && p.prenom; }
+  if (!nom || !prenom){ edevSetMsg('Choisissez un collaborateur (ou saisissez nom et prénom).', true); return; }
+  if (!f.d1){ edevSetMsg('Indiquez la date de début.', true); return; }
+  var d2 = f.d2 || f.d1;
+  if (d2 < f.d1){ edevSetMsg('La date de fin précède la date de début.', true); return; }
+  f.busy = true; edevSetMsg('Enregistrement…', false);
+  var btn = document.getElementById('edev-save'); if (btn) btn.disabled = true;
+  edevApi({ action: 'add', nom: nom, prenom: prenom, type: f.type, periode: f.periode === 'Journée entière' ? '' : f.periode, date_debut: f.d1, date_fin: d2, commentaire: f.comment })
+    .then(function(res){
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Erreur');
+      return edevLoadManual().then(function(){
+        var jump = edevIsoDay(f.d1);
+        EDEV_FORM.busy = false; EDEV_FORM.d1 = ''; EDEV_FORM.d2 = ''; EDEV_FORM.comment = ''; EDEV_FORM.who = (f.who === '__autre' ? '' : f.who); EDEV_FORM.nom = ''; EDEV_FORM.prenom = '';
+        if (jump) EDEV_CUR = new Date(jump.getFullYear(), jump.getMonth(), 1);
+        EDEV_SEL = null;
+        EDEV_FORM.msg = 'Saisie enregistrée ✔'; EDEV_FORM.err = false;
+        renderEdev();
+      });
+    })
+    .catch(function(e){ EDEV_FORM.busy = false; edevSetMsg('Erreur : ' + (e && e.message ? e.message : 'réessayez') + '.', true); if (btn) btn.disabled = false; });
+}
+function edevDelete(id){
+  var c = STATE.edevManuel.filter(function(x){ return String(x.id) === String(id); })[0];
+  if (!c) return;
+  if (!confirm('Supprimer la saisie de ' + c.prenom + ' ' + c.nom + ' (du ' + c.debut.toLocaleDateString('fr-FR') + ') ?')) return;
+  edevApi({ action: 'delete', id: id })
+    .then(function(res){ if (!res || !res.ok) throw new Error(); return edevLoadManual(); })
+    .then(function(){ renderEdev(); })
+    .catch(function(){ alert('Erreur lors de la suppression — réessayez.'); });
+}
+
+function edevFormHtml(){
+  var f = EDEV_FORM;
+  var people = edevPeople();
+  var whoOpts = '<option value="">— Choisir —</option>' + people.map(function(p, i){
+    return '<option value="' + i + '"' + (String(f.who) === String(i) ? ' selected' : '') + '>' + esc(p.prenom) + ' ' + esc((p.nom||'').toUpperCase()) + '</option>';
+  }).join('') + '<option value="__autre"' + (f.who === '__autre' ? ' selected' : '') + '>Autre (saisir le nom)…</option>';
+  var typeOpts = EDEV_TYPES.map(function(t){ return '<option value="' + esc(t[0]) + '"' + (f.type === t[0] ? ' selected' : '') + '>' + esc(t[1]) + '</option>'; }).join('');
+  var perOpts = EDEV_PERIODES.map(function(t){ return '<option' + (f.periode === t ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
+  return '<details class="eform"' + (f.open ? ' open' : '') + ' ontoggle="EDEV_FORM.open=this.open">' +
+    '<summary>➕ Saisir une absence ou une demande faite à la main (avant le nouveau process)</summary>' +
+    '<div class="eform-grid">' +
+      '<div><label>Collaborateur</label><select onchange="edevFormWho(this.value)">' + whoOpts + '</select></div>' +
+      '<div id="edev-autre" style="' + (f.who === '__autre' ? '' : 'display:none;') + 'grid-column:span 2"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div><label>Prénom</label><input type="text" value="' + esc(f.prenom) + '" oninput="edevF(\'prenom\',this.value)"></div>' +
+        '<div><label>Nom</label><input type="text" value="' + esc(f.nom) + '" oninput="edevF(\'nom\',this.value)"></div></div></div>' +
+      '<div><label>Type</label><select onchange="edevF(\'type\',this.value)">' + typeOpts + '</select></div>' +
+      '<div><label>Période</label><select onchange="edevF(\'periode\',this.value)">' + perOpts + '</select></div>' +
+      '<div><label>Du</label><input type="date" value="' + esc(f.d1) + '" onchange="edevFormD1(this.value)"></div>' +
+      '<div><label>Au (inclus)</label><input type="date" id="edev-f-d2" value="' + esc(f.d2) + '" onchange="edevF(\'d2\',this.value)"></div>' +
+      '<div class="full"><label>Commentaire (facultatif)</label><input type="text" maxlength="300" value="' + esc(f.comment) + '" oninput="edevF(\'comment\',this.value)" placeholder="ex : demande papier du 12/09"></div>' +
+    '</div>' +
+    '<div class="eform-actions"><button class="save" id="edev-save" onclick="edevSave()"' + (f.busy ? ' disabled' : '') + '>Enregistrer</button><span class="msg ' + (f.err ? 'err' : 'ok') + '" id="edev-msg">' + esc(f.msg) + '</span></div>' +
+    '<div class="hint">La saisie apparaît tout de suite dans le calendrier comme « validée ». Elle ne modifie pas les soldes de congés ni le fichier de suivi des demandes.</div>' +
+  '</details>';
+}
+
+function edevManualListHtml(){
+  var list = STATE.edevManuel.slice().sort(function(a,b){ return b.debut - a.debut; });
+  if (!list.length) return '';
+  return '<div class="emanual"><h4>Saisies manuelles (' + list.length + ')</h4>' + list.map(function(c){
+    var dates = c.debut.toLocaleDateString('fr-FR') + (c.fin && c.fin.getTime() !== c.debut.getTime() ? ' → ' + c.fin.toLocaleDateString('fr-FR') : '');
+    return '<div class="row"><span class="edot ' + edevCls(c) + '"></span><span class="who">' + esc(c.prenom) + ' ' + esc((c.nom||'').toUpperCase()) + '</span>' +
+      '<span class="meta">' + esc(edevTypeLib(c)) + (c.periode ? ' (' + esc(c.periode.toLowerCase()) + ')' : '') + ' · ' + dates + (c.comment ? ' · ' + esc(c.comment) : '') + '</span>' +
+      '<button class="del" onclick="edevDelete(\'' + attrSafe(String(c.id)) + '\')">🗑️ Supprimer</button></div>';
+  }).join('') + '</div>';
+}
+
 function renderEdev(){
   var panel = document.getElementById('sec-edev');
   if (!panel) return;
   var now = new Date(); var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (!EDEV_CUR) EDEV_CUR = new Date(today.getFullYear(), today.getMonth(), 1);
+  var items = edevItems();
 
   // Face + apercu : absents aujourd'hui (valides) et prochaines absences
   var absToday = {}, upcoming = [];
-  STATE.edev.forEach(function(c){
+  items.forEach(function(c){
     var fin = c.fin || c.debut;
-    if (c.statut === 'valide' && c.debut <= today && fin >= today) absToday[normalizeNom(c.nom) + '|' + normalizeNom(c.prenom)] = true;
+    if (edevIsValide(c) && c.debut <= today && fin >= today) absToday[normalizeNom(c.nom) + '|' + normalizeNom(c.prenom)] = true;
     if (fin >= today) upcoming.push(c);
   });
   upcoming.sort(function(a,b){ return a.debut - b.debut; });
@@ -928,11 +1093,11 @@ function renderEdev(){
   // Calendrier
   var map = edevBuildMap();
   var y = EDEV_CUR.getFullYear(), m = EDEV_CUR.getMonth();
-  var uCp = {}, uAbs = {}, jCp = 0, jAbs = 0;
+  var u = { cp: {}, rtt: {}, abs: {} }, j = { cp: 0, rtt: 0, abs: 0 };
   Object.keys(map).forEach(function(k){
     map[k].forEach(function(e){
-      var who = normalizeNom(e.nom) + '|' + normalizeNom(e.prenom);
-      if (e.cls.indexOf('abs') === 0){ uAbs[who] = true; jAbs++; } else { uCp[who] = true; jCp++; }
+      var cat = e.cls.split('-')[0];
+      u[cat][normalizeNom(e.nom) + '|' + normalizeNom(e.prenom)] = true; j[cat]++;
     });
   });
   var firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
@@ -944,9 +1109,9 @@ function renderEdev(){
   var nextN = 1;
   while (cells.length % 7 !== 0) cells.push({ n: nextN++, out: true });
 
-  var DOT_BG = { 'cp-valide':'var(--green)', 'cp-attente':'#E3F5E9', 'abs-valide':'var(--orange)', 'abs-attente':'#FDEBD8' };
-  var DOT_BD = { 'cp-attente':'var(--green)', 'abs-attente':'var(--orange)' };
-  var ORDER = { 'cp-valide':0, 'cp-attente':1, 'abs-valide':2, 'abs-attente':3 };
+  var DOT_BG = { 'cp-valide':'var(--green)', 'cp-attente':'#E3F5E9', 'rtt-valide':'var(--blue)', 'rtt-attente':'#DCEAF5', 'abs-valide':'var(--orange)', 'abs-attente':'#FDEBD8' };
+  var DOT_BD = { 'cp-attente':'var(--green)', 'rtt-attente':'var(--blue)', 'abs-attente':'var(--orange)' };
+  var ORDER = { 'cp-valide':0, 'cp-attente':1, 'rtt-valide':2, 'rtt-attente':3, 'abs-valide':4, 'abs-attente':5 };
   var grid = cells.map(function(c){
     if (c.out) return '<div class="eday out"><span class="num">' + c.n + '</span></div>';
     var k = edevKey(c.date);
@@ -965,23 +1130,25 @@ function renderEdev(){
     var dd = new Date(EDEV_SEL + 'T00:00:00');
     var list2 = (map[EDEV_SEL] || []).slice().sort(function(a,b){ return ORDER[a.cls] - ORDER[b.cls]; });
     var rows = list2.length ? list2.map(function(e){
-      return '<div class="row"><span class="edot ' + e.cls + '"></span><span class="name">' + esc(e.prenom) + ' ' + esc(e.nom) + '</span><span class="meta">' + esc(e.lib) + '</span></div>';
+      return '<div class="row"><span class="edot ' + e.cls + '"></span><span class="name">' + esc(e.prenom) + ' ' + esc(e.nom) + '</span><span class="meta">' + esc(e.lib) + (e.comment ? ' · ' + esc(e.comment) : '') + '</span></div>';
     }).join('') : '<div class="empty" style="padding:6px 0;text-align:left">Personne d\'absent ce jour-là.</div>';
     detail = '<div class="edetail"><button class="close" onclick="edevSelect(\'' + EDEV_SEL + '\')">✕ Fermer</button><h3>' +
       dd.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) + '</h3>' + rows + '</div>';
   }
 
   panel.querySelector('.panel-body').innerHTML =
+    edevFormHtml() +
     '<div class="ecal-bar"><button onclick="edevShift(-1)">‹ Précédent</button><span class="lbl">' + EDEV_MOIS[m] + ' ' + y + '</span><button onclick="edevShift(1)">Suivant ›</button><button onclick="edevToday()">Aujourd\'hui</button></div>' +
     '<div class="ecal-legend">' +
       '<span class="li"><span class="sw" style="background:var(--green)"></span>CP validé</span>' +
       '<span class="li"><span class="sw" style="background:#E3F5E9;border:1.5px dashed var(--green)"></span>CP en attente</span>' +
+      '<span class="li"><span class="sw" style="background:var(--blue)"></span>RTT</span>' +
       '<span class="li"><span class="sw" style="background:var(--orange)"></span>Absence validée</span>' +
       '<span class="li"><span class="sw" style="background:#FDEBD8;border:1.5px dashed var(--orange)"></span>Absence en attente</span>' +
     '</div>' +
-    '<div class="ecal-stats">' + Object.keys(uCp).length + ' collaborateur(s) en CP · ' + jCp + ' jour(s) de CP cumulés · ' + Object.keys(uAbs).length + ' en absence · ' + jAbs + ' jour(s) d\'absence cumulés</div>' +
+    '<div class="ecal-stats">' + Object.keys(u.cp).length + ' en CP (' + j.cp + ' j) · ' + Object.keys(u.rtt).length + ' en RTT (' + j.rtt + ' j) · ' + Object.keys(u.abs).length + ' en absence (' + j.abs + ' j) — jours calendaires, week-ends compris</div>' +
     '<div class="ecal"><div class="ecal-dow"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div><div class="ecal-grid">' + grid + '</div></div>' +
-    detail;
+    detail + edevManualListHtml();
 }
 
 function previewHtml(lines){
@@ -1007,8 +1174,9 @@ function loadAll(){
   var pSoldes = fetch(N8N_SOLDES).then(function(r){ return r.json(); }).catch(function(){ return { tout: {} }; });
   var pPlannings = fetch(N8N_PLANNINGS).then(function(r){ return r.json(); }).catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
+  var pEdevManuel = edevLoadManual();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -1018,7 +1186,7 @@ function loadAll(){
 
     STATE.edev = demandes
       .filter(function(d){ return normalizeNom(d.societe).indexOf('EDGARDDEVELOPPEMENT') !== -1; })
-      .filter(function(d){ return d.statut === 'valide' || d.statut === 'en_attente'; })
+      .filter(function(d){ return ['valide','en_attente','telecharge','attente_telechargement'].indexOf(d.statut) !== -1; })
       .map(function(d){
         var debut = edevDay(d.date_debut);
         return { nom: d.nom, prenom: d.prenom, type: d.type, statut: d.statut, debut: debut, fin: edevDay(d.date_fin) || debut };
