@@ -240,6 +240,7 @@ var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-su
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
+var N8N_EDEV_PAYLOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-dev-payload-get';
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
@@ -348,7 +349,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevManuel: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -899,7 +900,7 @@ var EDEV_FORM = { open: false, who: '', nom: '', prenom: '', type: 'CP', periode
 
 function edevKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function edevShort(prenom, nom){
-  prenom = (prenom||'').trim(); nom = (nom||'').trim();
+  prenom = (prenom||'').trim().toLowerCase().replace(/(^|[\s-])(\S)/g, function(m,a,b){ return a + b.toUpperCase(); }); nom = (nom||'').trim();
   return prenom + (nom ? ' ' + nom.charAt(0).toUpperCase() + '.' : '');
 }
 function edevDay(v){
@@ -913,7 +914,7 @@ function edevIsoDay(s){
 }
 // Categorie d'affichage : cp (vert), rtt (bleu), abs (orange)
 function edevCat(c){
-  if (c.type === 'RTT') return 'rtt';
+  if (c.type === 'RTT' || c.motif === 'RTT') return 'rtt';
   if (c.type === 'CP') return 'cp';
   return /ABS/.test(String(c.type||'').toUpperCase()) || c.manual ? 'abs' : 'cp';
 }
@@ -924,12 +925,74 @@ function edevTypeLib(c){
     var t = EDEV_TYPES.filter(function(x){ return x[0] === c.type; })[0];
     return t ? t[1] : c.type;
   }
+  if (c.motif){
+    var t2 = EDEV_TYPES.filter(function(x){ return x[0] === c.motif; })[0];
+    return t2 ? t2[1] : 'Absence — ' + c.motif;
+  }
   var u = String(c.type||'').toUpperCase();
   return u === 'CP' ? 'Congés payés' : (u === 'ABS' ? 'Absence' : (u === 'CP+ABS' ? 'CP + absence' : (c.type || 'Demande')));
 }
 function edevLib(c){
   return edevTypeLib(c) + (c.periode && c.periode !== 'Journée entière' ? ' (' + c.periode.toLowerCase() + ')' : '') +
     (edevIsValide(c) ? ' — validé' : ' — en attente') + (c.manual ? ' · saisie manuelle' : '');
+}
+/* --- Motif des absences (RTT, CSS, ANR, evt familial...) : lu dans le payload de la demande --- */
+var EDEV_PAY = {};   // cle (id ou r=) -> payload | null
+function edevPayKey(lien){
+  var m = /[?&]id=([^&#]+)/.exec(lien || '');
+  if (m) return { kind: 'id', v: decodeURIComponent(m[1]) };
+  m = /[?&]r=([^&#]+)/.exec(lien || '');
+  if (m) return { kind: 'r', v: m[1] };
+  return null;
+}
+function edevPayload(k){
+  var ck = k.kind + ':' + k.v;
+  if (ck in EDEV_PAY) return Promise.resolve(EDEV_PAY[ck]);
+  if (k.kind === 'r'){
+    var p; try { p = JSON.parse(decodeURIComponent(k.v)); } catch(e){ p = null; }
+    EDEV_PAY[ck] = p; return Promise.resolve(p);
+  }
+  return fetch(N8N_EDEV_PAYLOAD + '?id=' + encodeURIComponent(k.v))
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      var p = null;
+      try { p = res && res.data ? (typeof res.data === 'string' ? JSON.parse(res.data) : res.data) : null; } catch(e){}
+      EDEV_PAY[ck] = p; return p;
+    })
+    .catch(function(){ return null; });   // pas mis en cache : nouvel essai au prochain rafraichissement
+}
+function edevExpand(c){
+  var k = edevPayKey(c.lien), p = k ? EDEV_PAY[k.kind + ':' + k.v] : null;
+  var isAbs = /ABS/.test(String(c.type||'').toUpperCase());
+  if (!isAbs || !p) return [c];
+  var out = [];
+  if (p.cp && p.cp.d){
+    var cd = edevIsoDay(p.cp.d);
+    out.push({ nom: c.nom, prenom: c.prenom, type: 'CP', statut: c.statut, debut: cd, fin: edevIsoDay(p.cp.f) || cd });
+  }
+  if (p.abs && p.abs.motif){
+    var ad = edevIsoDay(p.abs.d) || c.debut;
+    var cm = p.abs.motif === 'RTT' ? (isNaN(Number(p.abs.j)) ? String(p.abs.j || '') : '') : String(p.abs.detail || '');
+    out.push({ nom: c.nom, prenom: c.prenom, type: 'ABS', motif: p.abs.motif, periode: p.abs.motif === 'RTT' ? (p.abs.rttPer || '') : '',
+               comment: cm, statut: c.statut, debut: ad, fin: edevIsoDay(p.abs.f) || ad });
+  }
+  return out.length ? out : [c];
+}
+function edevRebuild(){
+  var out = [];
+  STATE.edevBase.forEach(function(c){ edevExpand(c).forEach(function(x){ out.push(x); }); });
+  STATE.edev = out;
+}
+function edevEnrich(){
+  var todo = [], seen = {};
+  STATE.edevBase.forEach(function(c){
+    if (!/ABS/.test(String(c.type||'').toUpperCase())) return;
+    var k = edevPayKey(c.lien); if (!k) return;
+    var ck = k.kind + ':' + k.v;
+    if (ck in EDEV_PAY || seen[ck]) return;
+    seen[ck] = true; todo.push(k);
+  });
+  return Promise.all(todo.map(edevPayload));
 }
 function edevItems(){ return STATE.edev.concat(STATE.edevManuel); }
 
@@ -1184,14 +1247,15 @@ function loadAll(){
     STATE.cpHistorique = demandes.filter(function(d){ return d.statut === 'valide'; })
       .sort(function(a,b){ return new Date(b.date_derniere_action) - new Date(a.date_derniere_action); });
 
-    STATE.edev = demandes
+    STATE.edevBase = demandes
       .filter(function(d){ return normalizeNom(d.societe).indexOf('EDGARDDEVELOPPEMENT') !== -1; })
       .filter(function(d){ return ['valide','en_attente','telecharge','attente_telechargement'].indexOf(d.statut) !== -1; })
       .map(function(d){
         var debut = edevDay(d.date_debut);
-        return { nom: d.nom, prenom: d.prenom, type: d.type, statut: d.statut, debut: debut, fin: edevDay(d.date_fin) || debut };
+        return { rid: d.id, lien: d.lien || '', nom: d.nom, prenom: d.prenom, type: d.type, statut: d.statut, debut: debut, fin: edevDay(d.date_fin) || debut };
       })
       .filter(function(c){ return c.debut; });
+    edevRebuild();
 
     STATE.hs = (results[1] && results[1].data) || [];
     STATE.acompte = (results[2] && results[2].data) || [];
@@ -1209,6 +1273,7 @@ function loadAll(){
     renderSoldes();
     renderPlannings();
     renderEdev();
+    edevEnrich().then(function(){ edevRebuild(); renderEdev(); });
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
   }).catch(function(e){
