@@ -30,11 +30,11 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 @media(max-width:760px){
   .panel-grid{grid-template-columns:repeat(2,1fr)}
   #sec-cp{order:1}
-  #sec-samedi{order:2}
-  #sec-var{order:3}
-  #sec-hsac{order:4}
-  #sec-soldes{order:5}
-  #sec-plannings{order:6}
+  #sec-var{order:2}
+  #sec-hsac{order:3}
+  #sec-soldes{order:4}
+  #sec-plannings{order:5}
+  #sec-edev{order:6}
 }
 .panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
 .panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
@@ -92,6 +92,54 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .var-card .portal .pin b{font-family:'Playfair Display',serif;letter-spacing:.15em;color:var(--dk);font-size:12px}
 .panel-toolbar select{margin-left:8px}
 .panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
+
+/* Planning Edgard Developpement (calendrier mensuel) */
+.ecal-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.ecal-bar button{font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
+.ecal-bar button:hover{background:var(--dk);color:#fff;border-color:var(--dk)}
+.ecal-bar .lbl{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;min-width:170px;text-align:center}
+.ecal-legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--md);margin-bottom:10px}
+.ecal-legend .li{display:flex;align-items:center;gap:6px}
+.ecal-legend .sw{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+.ecal-stats{font-size:11.5px;color:var(--md);text-align:center;margin-bottom:12px}
+.ecal{background:#fff;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.ecal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--dk)}
+.ecal-dow div{color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.5px;text-align:center;padding:9px 4px}
+.ecal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.eday{border-right:1px solid var(--bd);border-bottom:1px solid var(--bd);min-height:96px;padding:6px 5px;cursor:pointer;transition:background .1s}
+.eday:hover{background:var(--lt)}
+.eday:nth-child(7n){border-right:none}
+.eday.out{background:#FAFAF8;color:#bbb;cursor:default}
+.eday.today .num{background:var(--dk);color:#fff;border-radius:50%}
+.eday.selected{background:#F1EAD6}
+.eday .num{font-size:12px;font-weight:600;display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;margin-bottom:4px}
+.ebub{display:block;font-size:9px;padding:1.5px 5px;border-radius:7px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
+.ebub.cp-valide{background:var(--green);color:#fff;font-weight:600}
+.ebub.cp-attente{background:#E3F5E9;color:#1e7a45;border:1px dashed var(--green)}
+.ebub.abs-valide{background:var(--orange);color:#fff;font-weight:600}
+.ebub.abs-attente{background:#FDEBD8;color:#a3560f;border:1px dashed var(--orange)}
+.ebub.more{background:none;color:var(--md);font-weight:700;padding:1.5px 2px}
+.edots{display:none;gap:2px;flex-wrap:wrap;margin-top:2px}
+.edots span{width:6px;height:6px;border-radius:50%;display:inline-block}
+.edot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.edot.cp-valide{background:var(--green)}
+.edot.cp-attente{background:#E3F5E9;border:1.5px solid var(--green)}
+.edot.abs-valide{background:var(--orange)}
+.edot.abs-attente{background:#FDEBD8;border:1.5px solid var(--orange)}
+.edetail{margin-top:12px;background:var(--lt);border:1px solid var(--bd);border-radius:10px;padding:14px 18px}
+.edetail h3{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:8px;text-transform:capitalize}
+.edetail .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px}
+.edetail .row:last-child{border-bottom:none}
+.edetail .name{font-weight:700;flex:0 0 auto}
+.edetail .meta{color:var(--md);font-size:11.5px}
+.edetail .close{float:right;background:none;border:none;font-size:13px;color:var(--md);cursor:pointer}
+@media(max-width:640px){
+  .eday{min-height:64px;padding:4px 3px}
+  .ebub{display:none}
+  .edots{display:flex}
+  .ecal-bar .lbl{min-width:120px;font-size:15px}
+  .ecal-dow div{font-size:8.5px}
+}
 
 .item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:6px 0 12px}
 .item-card{border-radius:10px;padding:14px 16px;border:1.5px solid var(--bd);background:#FEFAF0;display:flex;flex-direction:column;gap:7px}
@@ -163,7 +211,6 @@ var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser
 var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-relance-manuelle';
 var N8N_CP_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
 var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-supprimer-manuelle';
-var N8N_SAMEDIS   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-samedis-tournant';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
@@ -274,7 +321,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, samedis: [], hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -543,21 +590,6 @@ function supprimerCP(id){
     });
 }
 
-function renderSamedis(){
-  var pending = STATE.samedis;
-  var body = pending.length ? '<div class="item-grid">' + pending.map(function(s){
-    var who = esc(s.prenom) + ' ' + esc((s.nom||'').toUpperCase());
-    return '<div class="item-card reseau"><div class="top"><span class="who">' + who + '</span><span class="tag reseau">En attente</span></div>' +
-      '<div class="meta">' + esc(s.societe) + ' — samedi du ' + fmtDate(s.date_samedi || s.date) + '</div></div>';
-  }).join('') + '</div>' : '<div class="empty">Aucun samedi tournant en attente.</div>';
-  document.getElementById('sec-samedi').querySelector('.panel-body').innerHTML = body;
-  document.getElementById('samedi-count').textContent = pending.length;
-  document.getElementById('samedi-count').className = 'n' + (pending.length===0 ? ' ok' : '');
-  document.getElementById('samedi-preview').innerHTML = previewHtml(pending.map(function(s){
-    return esc(s.prenom) + ' ' + esc((s.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(s.societe);
-  }));
-}
-
 function renderHsAc(){
   var hs = STATE.hs.map(function(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
@@ -796,11 +828,6 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>' +
-    '<div class="panel" id="sec-samedi" style="--pc:#8E44AD">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-samedi\')"><div><div class="n" id="samedi-count">0</div><div class="l">Samedis tournants en attente (Edgard)</div></div><div class="chev">▾</div></div>' +
-      '<div class="panel-preview" id="samedi-preview" onclick="togglePanel(\'sec-samedi\')"></div>' +
-      '<div class="panel-detail"><div class="panel-body"></div></div>' +
-    '</div>' +
     '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
@@ -824,7 +851,137 @@ function buildPanels(){
         '<div class="panel-note" id="plannings-note">Accès direct à tous les plannings apprentis déposés sur OneDrive — pas besoin du code magasin.</div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
+    '</div>' +
+    '<div class="panel" id="sec-edev" style="--pc:#34495E">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-edev\')"><div><div class="n" id="edev-count">0</div><div class="l">Edgard Développement — absents aujourd\'hui</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="edev-preview" onclick="togglePanel(\'sec-edev\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-note">Planning de toutes les demandes d\'Edgard Développement (congés payés, absences) — validées et en attente, comme sur les espaces directeurs.</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
     '</div>';
+}
+
+/* ============================ PLANNING EDGARD DEVELOPPEMENT ============================ */
+var EDEV_CUR = null;   // 1er du mois affiche
+var EDEV_SEL = null;   // 'YYYY-MM-DD' du jour ouvert dans le detail
+var EDEV_MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function edevKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function edevShort(prenom, nom){
+  prenom = (prenom||'').trim(); nom = (nom||'').trim();
+  return prenom + (nom ? ' ' + nom.charAt(0).toUpperCase() + '.' : '');
+}
+function edevIsAbs(t){ return /ABS/.test(String(t||'').toUpperCase()); }
+function edevDay(v){
+  var d = excelOrIsoDate(v);
+  if (!d) return null;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function edevCls(c){ return (edevIsAbs(c.type) ? 'abs' : 'cp') + (c.statut === 'valide' ? '-valide' : '-attente'); }
+function edevLib(c){ return (c.type || (edevIsAbs(c.type) ? 'Absence' : 'Congé payé')) + (c.statut === 'valide' ? ' — validé' : ' — en attente'); }
+
+function edevBuildMap(){
+  var y = EDEV_CUR.getFullYear(), m = EDEV_CUR.getMonth();
+  var ms = new Date(y, m, 1), me = new Date(y, m+1, 0);
+  var map = {};
+  STATE.edev.forEach(function(c){
+    var fin = c.fin || c.debut;
+    if (fin < ms || c.debut > me) return;
+    var d = new Date(Math.max(c.debut, ms)), last = new Date(Math.min(fin, me));
+    while (d <= last){
+      var k = edevKey(d);
+      (map[k] = map[k] || []).push({ cls: edevCls(c), label: edevShort(c.prenom, c.nom), nom: c.nom, prenom: c.prenom, lib: edevLib(c) });
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  return map;
+}
+
+function edevShift(n){ EDEV_CUR = new Date(EDEV_CUR.getFullYear(), EDEV_CUR.getMonth() + n, 1); EDEV_SEL = null; renderEdev(); }
+function edevToday(){ var t = new Date(); EDEV_CUR = new Date(t.getFullYear(), t.getMonth(), 1); EDEV_SEL = null; renderEdev(); }
+function edevSelect(k){ EDEV_SEL = (EDEV_SEL === k ? null : k); renderEdev(); }
+
+function renderEdev(){
+  var panel = document.getElementById('sec-edev');
+  if (!panel) return;
+  var now = new Date(); var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!EDEV_CUR) EDEV_CUR = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  // Face + apercu : absents aujourd'hui (valides) et prochaines absences
+  var absToday = {}, upcoming = [];
+  STATE.edev.forEach(function(c){
+    var fin = c.fin || c.debut;
+    if (c.statut === 'valide' && c.debut <= today && fin >= today) absToday[normalizeNom(c.nom) + '|' + normalizeNom(c.prenom)] = true;
+    if (fin >= today) upcoming.push(c);
+  });
+  upcoming.sort(function(a,b){ return a.debut - b.debut; });
+  var nToday = Object.keys(absToday).length;
+  document.getElementById('edev-count').textContent = nToday;
+  document.getElementById('edev-count').className = 'n' + (nToday === 0 ? ' ok' : '');
+  var pv = upcoming.slice(0, 2).map(function(c){
+    return '<div class="pv-item">' + esc(edevShort(c.prenom, c.nom)) + ' — ' + c.debut.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) + '</div>';
+  }).join('');
+  if (upcoming.length > 2) pv += '<div class="pv-more">+ ' + (upcoming.length - 2) + ' autre' + (upcoming.length - 2 > 1 ? 's' : '') + ' à venir</div>';
+  document.getElementById('edev-preview').innerHTML = pv || '<div class="pv-item" style="color:#bbb">Aucune absence à venir</div>';
+
+  // Calendrier
+  var map = edevBuildMap();
+  var y = EDEV_CUR.getFullYear(), m = EDEV_CUR.getMonth();
+  var uCp = {}, uAbs = {}, jCp = 0, jAbs = 0;
+  Object.keys(map).forEach(function(k){
+    map[k].forEach(function(e){
+      var who = normalizeNom(e.nom) + '|' + normalizeNom(e.prenom);
+      if (e.cls.indexOf('abs') === 0){ uAbs[who] = true; jAbs++; } else { uCp[who] = true; jCp++; }
+    });
+  });
+  var firstDow = (new Date(y, m, 1).getDay() + 6) % 7;
+  var daysInMonth = new Date(y, m+1, 0).getDate();
+  var prevDays = new Date(y, m, 0).getDate();
+  var cells = [];
+  for (var i = firstDow - 1; i >= 0; i--) cells.push({ n: prevDays - i, out: true });
+  for (var d = 1; d <= daysInMonth; d++) cells.push({ n: d, out: false, date: new Date(y, m, d) });
+  var nextN = 1;
+  while (cells.length % 7 !== 0) cells.push({ n: nextN++, out: true });
+
+  var DOT_BG = { 'cp-valide':'var(--green)', 'cp-attente':'#E3F5E9', 'abs-valide':'var(--orange)', 'abs-attente':'#FDEBD8' };
+  var DOT_BD = { 'cp-attente':'var(--green)', 'abs-attente':'var(--orange)' };
+  var ORDER = { 'cp-valide':0, 'cp-attente':1, 'abs-valide':2, 'abs-attente':3 };
+  var grid = cells.map(function(c){
+    if (c.out) return '<div class="eday out"><span class="num">' + c.n + '</span></div>';
+    var k = edevKey(c.date);
+    var list = (map[k] || []).slice().sort(function(a,b){ return ORDER[a.cls] - ORDER[b.cls]; });
+    var bubbles = list.slice(0,3).map(function(e){ return '<span class="ebub ' + e.cls + '">' + esc(e.label) + '</span>'; }).join('');
+    if (list.length > 3) bubbles += '<span class="ebub more">+' + (list.length - 3) + ' autre(s)</span>';
+    var dots = list.slice(0,6).map(function(e){
+      return '<span style="background:' + DOT_BG[e.cls] + ';' + (DOT_BD[e.cls] ? 'border:1px solid ' + DOT_BD[e.cls] + ';' : '') + '"></span>';
+    }).join('');
+    return '<div class="eday' + (edevKey(today) === k ? ' today' : '') + (EDEV_SEL === k ? ' selected' : '') + '" onclick="edevSelect(\'' + k + '\')">' +
+      '<span class="num">' + c.n + '</span>' + bubbles + '<div class="edots">' + dots + '</div></div>';
+  }).join('');
+
+  var detail = '';
+  if (EDEV_SEL){
+    var dd = new Date(EDEV_SEL + 'T00:00:00');
+    var list2 = (map[EDEV_SEL] || []).slice().sort(function(a,b){ return ORDER[a.cls] - ORDER[b.cls]; });
+    var rows = list2.length ? list2.map(function(e){
+      return '<div class="row"><span class="edot ' + e.cls + '"></span><span class="name">' + esc(e.prenom) + ' ' + esc(e.nom) + '</span><span class="meta">' + esc(e.lib) + '</span></div>';
+    }).join('') : '<div class="empty" style="padding:6px 0;text-align:left">Personne d\'absent ce jour-là.</div>';
+    detail = '<div class="edetail"><button class="close" onclick="edevSelect(\'' + EDEV_SEL + '\')">✕ Fermer</button><h3>' +
+      dd.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) + '</h3>' + rows + '</div>';
+  }
+
+  panel.querySelector('.panel-body').innerHTML =
+    '<div class="ecal-bar"><button onclick="edevShift(-1)">‹ Précédent</button><span class="lbl">' + EDEV_MOIS[m] + ' ' + y + '</span><button onclick="edevShift(1)">Suivant ›</button><button onclick="edevToday()">Aujourd\'hui</button></div>' +
+    '<div class="ecal-legend">' +
+      '<span class="li"><span class="sw" style="background:var(--green)"></span>CP validé</span>' +
+      '<span class="li"><span class="sw" style="background:#E3F5E9;border:1.5px dashed var(--green)"></span>CP en attente</span>' +
+      '<span class="li"><span class="sw" style="background:var(--orange)"></span>Absence validée</span>' +
+      '<span class="li"><span class="sw" style="background:#FDEBD8;border:1.5px dashed var(--orange)"></span>Absence en attente</span>' +
+    '</div>' +
+    '<div class="ecal-stats">' + Object.keys(uCp).length + ' collaborateur(s) en CP · ' + jCp + ' jour(s) de CP cumulés · ' + Object.keys(uAbs).length + ' en absence · ' + jAbs + ' jour(s) d\'absence cumulés</div>' +
+    '<div class="ecal"><div class="ecal-dow"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div><div class="ecal-grid">' + grid + '</div></div>' +
+    detail;
 }
 
 function previewHtml(lines){
@@ -845,14 +1002,13 @@ function loadAll(){
   sel.value = VAR_PERIODE;
 
   var pCP = fetch(N8N_DEMANDES).then(function(r){ return r.json(); }).catch(function(){ return { data: [], archive: [] }; });
-  var pSam = fetch(N8N_SAMEDIS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pHS = fetch(N8N_HS).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pAC = fetch(N8N_ACOMPTE).then(function(r){ return r.json(); }).catch(function(){ return { data: [] }; });
   var pSoldes = fetch(N8N_SOLDES).then(function(r){ return r.json(); }).catch(function(){ return { tout: {} }; });
   var pPlannings = fetch(N8N_PLANNINGS).then(function(r){ return r.json(); }).catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
 
-  Promise.all([pCP, pSam, pHS, pAC, pSoldes, pPlannings, pVar]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -860,25 +1016,31 @@ function loadAll(){
     STATE.cpHistorique = demandes.filter(function(d){ return d.statut === 'valide'; })
       .sort(function(a,b){ return new Date(b.date_derniere_action) - new Date(a.date_derniere_action); });
 
-    var samRaw = Array.isArray(results[1]) ? results[1] : (results[1].data || []);
-    STATE.samedis = samRaw.filter(function(s){ return s.statut === 'en_attente'; });
+    STATE.edev = demandes
+      .filter(function(d){ return normalizeNom(d.societe).indexOf('EDGARDDEVELOPPEMENT') !== -1; })
+      .filter(function(d){ return d.statut === 'valide' || d.statut === 'en_attente'; })
+      .map(function(d){
+        var debut = edevDay(d.date_debut);
+        return { nom: d.nom, prenom: d.prenom, type: d.type, statut: d.statut, debut: debut, fin: edevDay(d.date_fin) || debut };
+      })
+      .filter(function(c){ return c.debut; });
 
-    STATE.hs = (results[2] && results[2].data) || [];
-    STATE.acompte = (results[3] && results[3].data) || [];
+    STATE.hs = (results[1] && results[1].data) || [];
+    STATE.acompte = (results[2] && results[2].data) || [];
 
-    var soldesParsed = buildSoldesFlat((results[4] && results[4].tout) || {}, (results[4] && results[4].futuresCP) || {});
+    var soldesParsed = buildSoldesFlat((results[3] && results[3].tout) || {}, (results[3] && results[3].futuresCP) || {});
     STATE.soldes = soldesParsed.list;
     STATE.soldesArretes = soldesParsed.arretes;
     STATE.soldesMois = soldesParsed.mois;
 
-    STATE.plannings = (results[5] && results[5].plannings) || [];
-    STATE.planningsManquants = (results[5] && results[5].magasinsManquants) || [];
+    STATE.plannings = (results[4] && results[4].plannings) || [];
+    STATE.planningsManquants = (results[4] && results[4].magasinsManquants) || [];
 
     renderCP();
-    renderSamedis();
     renderHsAc();
     renderSoldes();
     renderPlannings();
+    renderEdev();
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
   }).catch(function(e){
