@@ -899,9 +899,11 @@ var EDEV_PERIODES = ['Journée entière','Matin','Après-midi'];
 var EDEV_FORM = { open: false, who: '', nom: '', prenom: '', type: 'CP', periode: 'Journée entière', d1: '', d2: '', comment: '', msg: '', err: false, busy: false };
 
 function edevKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function edevPrenom(v){ return String(v||'').replace(/\s+/g,' ').trim().toLocaleLowerCase('fr').replace(/(^|[\s\-'’])(\S)/g, function(m,a,b){ return a + b.toLocaleUpperCase('fr'); }); }
+function edevNom(v){ return String(v||'').replace(/\s+/g,' ').trim().toLocaleUpperCase('fr'); }
 function edevShort(prenom, nom){
-  prenom = (prenom||'').trim().toLowerCase().replace(/(^|[\s-])(\S)/g, function(m,a,b){ return a + b.toUpperCase(); }); nom = (nom||'').trim();
-  return prenom + (nom ? ' ' + nom.charAt(0).toUpperCase() + '.' : '');
+  nom = edevNom(nom);
+  return edevPrenom(prenom) + (nom ? ' ' + nom.charAt(0) + '.' : '');
 }
 function edevDay(v){
   var d = excelOrIsoDate(v);
@@ -1006,7 +1008,7 @@ function edevBuildMap(){
     var d = new Date(Math.max(c.debut, ms)), last = new Date(Math.min(fin, me));
     while (d <= last){
       var k = edevKey(d);
-      (map[k] = map[k] || []).push({ cls: edevCls(c), label: edevShort(c.prenom, c.nom), nom: c.nom, prenom: c.prenom, lib: edevLib(c), comment: c.comment || '' });
+      (map[k] = map[k] || []).push({ cls: edevCls(c), label: edevShort(c.prenom, c.nom), nom: edevNom(c.nom), prenom: edevPrenom(c.prenom), lib: edevLib(c), comment: c.comment || '' });
       d.setDate(d.getDate() + 1);
     }
   });
@@ -1062,6 +1064,7 @@ function edevSave(){
   var f = EDEV_FORM, nom, prenom;
   if (f.who === '__autre'){ nom = (f.nom||'').trim(); prenom = (f.prenom||'').trim(); }
   else if (f.who !== ''){ var p = edevPeople()[Number(f.who)]; nom = p && p.nom; prenom = p && p.prenom; }
+  nom = edevNom(nom); prenom = edevPrenom(prenom);
   if (!nom || !prenom){ edevSetMsg('Choisissez un collaborateur (ou saisissez nom et prénom).', true); return; }
   if (!f.d1){ edevSetMsg('Indiquez la date de début.', true); return; }
   var d2 = f.d2 || f.d1;
@@ -1096,7 +1099,7 @@ function edevFormHtml(){
   var f = EDEV_FORM;
   var people = edevPeople();
   var whoOpts = '<option value="">— Choisir —</option>' + people.map(function(p, i){
-    return '<option value="' + i + '"' + (String(f.who) === String(i) ? ' selected' : '') + '>' + esc(p.prenom) + ' ' + esc((p.nom||'').toUpperCase()) + '</option>';
+    return '<option value="' + i + '"' + (String(f.who) === String(i) ? ' selected' : '') + '>' + esc(edevPrenom(p.prenom)) + ' ' + esc(edevNom(p.nom)) + '</option>';
   }).join('') + '<option value="__autre"' + (f.who === '__autre' ? ' selected' : '') + '>Autre (saisir le nom)…</option>';
   var typeOpts = EDEV_TYPES.map(function(t){ return '<option value="' + esc(t[0]) + '"' + (f.type === t[0] ? ' selected' : '') + '>' + esc(t[1]) + '</option>'; }).join('');
   var perOpts = EDEV_PERIODES.map(function(t){ return '<option' + (f.periode === t ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
@@ -1123,7 +1126,7 @@ function edevManualListHtml(){
   if (!list.length) return '';
   return '<div class="emanual"><h4>Saisies manuelles (' + list.length + ')</h4>' + list.map(function(c){
     var dates = c.debut.toLocaleDateString('fr-FR') + (c.fin && c.fin.getTime() !== c.debut.getTime() ? ' → ' + c.fin.toLocaleDateString('fr-FR') : '');
-    return '<div class="row"><span class="edot ' + edevCls(c) + '"></span><span class="who">' + esc(c.prenom) + ' ' + esc((c.nom||'').toUpperCase()) + '</span>' +
+    return '<div class="row"><span class="edot ' + edevCls(c) + '"></span><span class="who">' + esc(edevPrenom(c.prenom)) + ' ' + esc(edevNom(c.nom)) + '</span>' +
       '<span class="meta">' + esc(edevTypeLib(c)) + (c.periode ? ' (' + esc(c.periode.toLowerCase()) + ')' : '') + ' · ' + dates + (c.comment ? ' · ' + esc(c.comment) : '') + '</span>' +
       '<button class="del" onclick="edevDelete(\'' + attrSafe(String(c.id)) + '\')">🗑️ Supprimer</button></div>';
   }).join('') + '</div>';
