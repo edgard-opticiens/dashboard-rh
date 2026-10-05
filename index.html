@@ -644,10 +644,27 @@ function buildSoldesFlat(tout, futuresCP){
         var totalBrut = report + n1Restant + nRestant;
         var mensuel = posesParKey[normalizeNom(s.nom)] || mois.map(function(){ return 0; });
         var poses = mensuel.reduce(function(acc, v){ return acc + v; }, 0);
+
+        // Les jours deja poses sont imputes sur l'enveloppe la plus ancienne en premier (report,
+        // puis N-1, puis N) : c'est l'ordre reel de consommation des CP (les plus anciens doivent
+        // etre soldes avant la fin de periode), donc les colonnes affichees sont nettes des jours
+        // deja poses plutot qu'un seul total global indistinct.
+        var restantAPutter = poses;
+        var reportDeduit = Math.min(report, restantAPutter); restantAPutter -= reportDeduit;
+        var n1Deduit = Math.min(n1Restant, restantAPutter); restantAPutter -= n1Deduit;
+        var nDeduit = Math.min(nRestant, restantAPutter); restantAPutter -= nDeduit;
+        var reportNet = report - reportDeduit;
+        var n1RestantNet = n1Restant - n1Deduit;
+        var nRestantNet = nRestant - nDeduit;
+        // restantAPutter > 0 signifierait plus de jours poses que de solde brut disponible (anomalie
+        // de donnees) : on ne passe jamais en negatif, le total reste a 0 dans ce cas.
+
         out.push({
           magasin: mag, nom: s.nom || '', matricule: s.matricule || '',
-          report: report, n1Restant: n1Restant, nRestant: nRestant,
-          totalBrut: totalBrut, mensuel: mensuel, poses: poses, total: totalBrut - poses,
+          report: reportNet, n1Restant: n1RestantNet, nRestant: nRestantNet,
+          reportBrut: report, n1RestantBrut: n1Restant, nRestantBrut: nRestant,
+          totalBrut: totalBrut, mensuel: mensuel, poses: poses, total: reportNet + n1RestantNet + nRestantNet,
+          depassement: restantAPutter > 0.0001 ? restantAPutter : 0,
           arrete: snap.arrete || ''
         });
       });
@@ -689,14 +706,18 @@ function renderSoldes(){
   } else {
     var moisHeaders = mois.map(function(mm){ return '<th>' + esc(mm.label) + '</th>'; }).join('');
     box.innerHTML = '<div class="soldes-wrap"><table class="soldes-table"><thead><tr>' +
-      '<th>Salarié</th><th>Magasin</th><th>Antérieur</th><th>Restant N-1</th><th>Restant N</th>' + moisHeaders + '<th>Solde estimé</th><th>Arrêté au</th>' +
+      '<th>Salarié</th><th>Magasin</th><th>Antérieur net</th><th>Restant N-1 net</th><th>Restant N net</th>' + moisHeaders + '<th>Solde estimé</th><th>Arrêté au</th>' +
       '</tr></thead><tbody>' + filtered.map(function(d){
         var isAlert = seuil > 0 && d.total >= seuil;
         var moisCells = (d.mensuel || mois.map(function(){ return 0; })).map(function(v){
           return '<td class="poses">' + (v > 0 ? '− ' + fmtNum(v) : '—') + '</td>';
         }).join('');
-        return '<tr' + (isAlert ? ' class="alert"' : '') + '>' +
-          '<td class="who">' + esc(d.nom) + '</td>' +
+        var titreAnomalie = d.depassement > 0
+          ? ' title="Anomalie : ' + fmtNum(d.depassement) + ' j posés en plus du solde brut disponible — à vérifier"'
+          : '';
+        var rowCls = (isAlert || d.depassement > 0) ? ' class="alert"' : '';
+        return '<tr' + rowCls + titreAnomalie + '>' +
+          '<td class="who">' + esc(d.nom) + (d.depassement > 0 ? ' ⚠️' : '') + '</td>' +
           '<td>' + esc(d.magasin) + '</td>' +
           '<td>' + fmtNum(d.report) + '</td>' +
           '<td>' + fmtNum(d.n1Restant) + '</td>' +
@@ -719,7 +740,7 @@ function renderSoldes(){
   var noteEl = document.getElementById('soldes-note');
   var arretesTxt = STATE.soldesArretes.length ? STATE.soldesArretes.join(', ') : '—';
   var periodeTxt = mois.length ? (mois[0].label + ' à ' + mois[mois.length-1].label) : '—';
-  noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Les colonnes mensuelles (' + periodeTxt + ') indiquent, comme sur les espaces directeurs, les CP déjà posés via l\'outil digital mois par mois, du mois suivant l\'arrêté de chaque magasin jusqu\'à la fin de la période (31/05/2027) — ils sont déjà déduits du solde estimé pour ne pas compter deux fois les jours déjà pris. Ajustez le seuil pour repérer les situations à surveiller.';
+  noteEl.textContent = 'Soldes arrêtés au : ' + arretesTxt + '. Les colonnes mensuelles (' + periodeTxt + ') indiquent, comme sur les espaces directeurs, les CP déjà posés via l\'outil digital mois par mois, du mois suivant l\'arrêté de chaque magasin jusqu\'à la fin de la période (31/05/2027). Les colonnes Antérieur / Restant N-1 / Restant N sont déjà nettes de ces jours posés, imputés sur l\'enveloppe la plus ancienne en premier (Antérieur, puis N-1, puis N) — comme pour une consommation réelle des congés. Ajustez le seuil pour repérer les situations à surveiller.';
 }
 
 function renderPlannings(){
