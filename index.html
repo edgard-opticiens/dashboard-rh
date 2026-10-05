@@ -35,6 +35,7 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
   #sec-soldes{order:4}
   #sec-plannings{order:5}
   #sec-edev{order:6}
+  #sec-dirs{order:7}
 }
 .panel{background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.06);overflow:hidden;border-top:5px solid var(--pc);cursor:pointer;transition:box-shadow .15s}
 .panel:hover{box-shadow:0 6px 22px rgba(0,0,0,.1)}
@@ -152,6 +153,46 @@ body{font-family:'DM Sans',sans-serif;background:#F2EFE8;min-height:100vh;paddin
 .emanual button.del:hover{background:var(--red);color:#fff}
 .emanual button.del:disabled{opacity:.55;cursor:default}
 .ebadge{font-size:9px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:2px 7px;border-radius:5px;background:#EEE;color:#666}
+
+/* ---- Planning directeurs ---- */
+.dgrid-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:#fff}
+table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
+.dgrid th,.dgrid td{padding:0;border-bottom:1px solid #eee;text-align:center}
+.dgrid thead th{background:var(--dk);color:#fff;font-weight:600;height:34px;min-width:26px;cursor:pointer;position:sticky;top:0}
+.dgrid thead th.wk{background:#4a4a4a}
+.dgrid thead th.today{background:var(--orange)}
+.dgrid thead th.sel{outline:2px solid #fff;outline-offset:-3px}
+.dgrid thead th.first{min-width:210px;text-align:left;padding:0 12px;cursor:default;position:sticky;left:0;z-index:3}
+.dgrid thead th small{display:block;font-weight:400;font-size:8.5px;opacity:.8;line-height:1}
+.dgrid td.first{position:sticky;left:0;background:#fff;text-align:left;padding:5px 12px;min-width:210px;z-index:2;border-right:1px solid var(--bd)}
+.dgrid td.first .mag{font-weight:700;font-size:11.5px;color:var(--dk)}
+.dgrid td.first .mag .tag{font-size:8.5px;font-weight:600;margin-left:6px;padding:1px 6px;border-radius:8px;background:#EEE;color:#777;text-transform:uppercase;letter-spacing:.3px}
+.dgrid td.first .who{font-size:11px;color:#555}
+.dgrid td.first .who a,.dgrid td.first .adj a{color:inherit;text-decoration:none;border-bottom:1px dotted #aaa}
+.dgrid td.first .adj{font-size:10px;color:#999}
+.dgrid tr.sep td{background:var(--lt);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--md);text-align:left;padding:6px 12px}
+.dgrid td.c{height:34px;min-width:26px}
+.dgrid td.c.wk{background:#f6f4ef}
+.dgrid td.c.today{box-shadow:inset 2px 0 0 var(--orange),inset -2px 0 0 var(--orange)}
+.dgrid td.c.sel{background:#fff7e6}
+.dgrid td.c .b{display:block;height:22px;margin:0 -1px}
+.dgrid td.c .b.cp-valide{background:var(--green)}
+.dgrid td.c .b.cp-attente{background:repeating-linear-gradient(135deg,#E3F5E9,#E3F5E9 4px,#cbe9d5 4px,#cbe9d5 8px);border-top:1.5px dashed var(--green);border-bottom:1.5px dashed var(--green)}
+.dgrid td.c .b.abs-valide{background:var(--orange)}
+.dgrid td.c .b.abs-attente{background:repeating-linear-gradient(135deg,#FDEBD8,#FDEBD8 4px,#f8d9b8 4px,#f8d9b8 8px);border-top:1.5px dashed var(--orange);border-bottom:1.5px dashed var(--orange)}
+.dcontact{margin:0 0 14px;background:var(--lt);border:1px solid var(--bd);border-radius:10px;padding:12px 16px}
+.dcontact h4{font-family:'Playfair Display',serif;font-size:14px;margin-bottom:8px}
+.dcontact .row{display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12.5px;flex-wrap:wrap}
+.dcontact .row:last-child{border-bottom:none}
+.dcontact .mag{font-weight:700;min-width:96px}
+.dcontact .abs{color:#a3560f}
+.dcontact .to{flex:1 1 220px}
+.dcontact .to a{color:var(--dk);font-weight:600}
+.dcontact .none{color:var(--red);font-weight:600}
+.dcontact .ok{color:#1e7a45;font-size:12.5px}
+.dfilters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.dfilters button.pill{font-family:'DM Sans',sans-serif;font-size:11px;padding:5px 12px;border-radius:14px;border:1px solid var(--bd);background:#fff;color:var(--dk);cursor:pointer}
+.dfilters button.pill.on{background:var(--dk);color:#fff;border-color:var(--dk)}
 .edetail{margin-top:12px;background:var(--lt);border:1px solid var(--bd);border-radius:10px;padding:14px 18px}
 .edetail h3{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:8px;text-transform:capitalize}
 .edetail .row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12.5px}
@@ -241,6 +282,7 @@ var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-s
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
 var N8N_EDEV_PAYLOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-dev-payload-get';
+var N8N_DIRECTEURS = 'https://edgard-opticiens.app.n8n.cloud/webhook/directeurs-liste';
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
@@ -349,7 +391,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [] };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -887,6 +929,14 @@ function buildPanels(){
         '<div class="panel-note">Planning de toutes les demandes d\'Edgard Développement (congés payés, RTT, absences) — validées, déjà traitées par la RH ou en attente — plus les saisies manuelles.</div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
+    '</div>' +
+    '<div class="panel" id="sec-dirs" style="--pc:#8E5A2B">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-dirs\')"><div><div class="n" id="dirs-count">0</div><div class="l">Directeurs absents aujourd\'hui</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="dirs-preview" onclick="togglePanel(\'sec-dirs\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-note">Planning consolidé des directeurs Edgard et Générale d\'Optique (congés et absences validés ou en attente), avec l\'adjoint à contacter quand un directeur est absent. Source : fichier « Correspondance directeurs ».</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
     '</div>';
 }
 
@@ -1217,6 +1267,159 @@ function renderEdev(){
     detail + edevManualListHtml();
 }
 
+/* ============================ PLANNING DIRECTEURS (Edgard + GdO) ============================ */
+var DIRS_CUR = null, DIRS_SEL = null, DIRS_ENS = 'all', DIRS_ONLY = false;
+var N_JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+
+function dirsParseName(full){
+  var t = String(full||'').trim().split(/\s+/).filter(Boolean);
+  if (!t.length) return { nom: '', prenom: '' };
+  var i = 0;
+  while (i < t.length - 1 && t[i] === t[i].toLocaleUpperCase('fr') && /[A-Za-zÀ-ÿ]/.test(t[i])) i++;
+  if (i === 0) i = 1;
+  return { nom: t.slice(0, i).join(' '), prenom: t.slice(i).join(' ') };
+}
+function dirsPerson(full, email){
+  var n = dirsParseName(full);
+  var k1 = normalizeNom(n.nom + n.prenom), k2 = normalizeNom(n.prenom + n.nom);
+  return { nom: edevNom(n.nom), prenom: edevPrenom(n.prenom), email: email || '', keys: [k1, k2], label: (edevPrenom(n.prenom) + ' ' + edevNom(n.nom)).trim() };
+}
+function dirsLoad(){
+  return fetch(N8N_DIRECTEURS).then(function(r){ return r.json(); }).then(function(res){
+    var rows = ((res && res.values) || []).slice(1);
+    return rows.filter(function(r){ return r[1] && r[2]; }).map(function(r){
+      var ens = /g[ée]n[ée]rale|gdo/i.test(String(r[0]||'')) ? 'GdO' : 'Edgard';
+      var mag = String(r[1]).trim();
+      return { ens: ens, mag: mag.charAt(0).toUpperCase() + mag.slice(1).toLowerCase(),
+               dir: dirsPerson(r[2], String(r[3]||'').trim()),
+               adj: String(r[4]||'').trim() ? dirsPerson(r[4], String(r[5]||'').trim()) : null };
+    });
+  }).catch(function(){ return null; });
+}
+/* Absences d'une personne : liste {debut, fin, cat, statut, type} d'apres les demandes (hors Edgard Dev, deja couvertes) */
+function dirsAbsOf(person){
+  var out = [];
+  STATE.dirsAbs.forEach(function(c){
+    if (person.keys.indexOf(c.k1) !== -1 || person.keys.indexOf(c.k2) !== -1) out.push(c);
+  });
+  return out;
+}
+function dirsBuildAbs(demandes){
+  STATE.dirsAbs = demandes
+    .filter(function(d){ return ['valide','en_attente','telecharge','attente_telechargement'].indexOf(d.statut) !== -1; })
+    .map(function(d){
+      var debut = edevDay(d.date_debut);
+      return { k1: normalizeNom(d.nom) + normalizeNom(d.prenom), k2: normalizeNom(d.prenom) + normalizeNom(d.nom),
+               type: d.type, statut: d.statut, debut: debut, fin: edevDay(d.date_fin) || debut };
+    }).filter(function(c){ return c.debut; });
+}
+function dirsStateOn(person, day){
+  // retourne la meilleure absence couvrant `day` : validee prioritaire sur en attente
+  var best = null;
+  dirsAbsOf(person).forEach(function(c){
+    if (c.debut <= day && c.fin >= day){
+      var valide = c.statut !== 'en_attente';
+      if (!best || (valide && !best.valide)) best = { valide: valide, cat: (String(c.type).toUpperCase() === 'CP' ? 'cp' : 'abs'), type: c.type, debut: c.debut, fin: c.fin };
+    }
+  });
+  return best;
+}
+function dirsFmt(d){ return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }); }
+function dirsTypeLib(t){ var u = String(t||'').toUpperCase(); return u === 'CP' ? 'Congés payés' : (u === 'ABS' ? 'Absence' : (u === 'CP+ABS' ? 'CP + absence' : 'Absence')); }
+function dirsShift(n){ DIRS_CUR = new Date(DIRS_CUR.getFullYear(), DIRS_CUR.getMonth() + n, 1); renderDirs(); }
+function dirsToday(){ var t = new Date(); DIRS_CUR = new Date(t.getFullYear(), t.getMonth(), 1); DIRS_SEL = null; renderDirs(); }
+function dirsSelect(k){ DIRS_SEL = (DIRS_SEL === k ? null : k); renderDirs(); }
+function dirsEns(v){ DIRS_ENS = v; renderDirs(); }
+function dirsOnly(){ DIRS_ONLY = !DIRS_ONLY; renderDirs(); }
+
+function renderDirs(){
+  var panel = document.getElementById('sec-dirs');
+  if (!panel) return;
+  var now = new Date(); var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!DIRS_CUR) DIRS_CUR = new Date(today.getFullYear(), today.getMonth(), 1);
+  var body = panel.querySelector('.panel-body');
+  if (!STATE.dirs || !STATE.dirs.length){
+    document.getElementById('dirs-count').textContent = '–';
+    document.getElementById('dirs-preview').innerHTML = '<div class="pv-item" style="color:#bbb">Liste des directeurs indisponible</div>';
+    body.innerHTML = '<div class="empty">Impossible de charger la liste des directeurs. Réessayez dans un instant (bouton Actualiser).</div>';
+    return;
+  }
+  var selDay = DIRS_SEL ? new Date(DIRS_SEL + 'T00:00:00') : today;
+
+  // Face / apercu : absents aujourd'hui (valides)
+  var absNow = STATE.dirs.filter(function(r){ var st = dirsStateOn(r.dir, today); return st && st.valide; });
+  document.getElementById('dirs-count').textContent = absNow.length;
+  document.getElementById('dirs-count').className = 'n' + (absNow.length === 0 ? ' ok' : '');
+  var pv = absNow.slice(0, 2).map(function(r){ return '<div class="pv-item">' + esc(r.dir.prenom) + ' ' + esc(r.dir.nom.charAt(0)) + '. — ' + esc(r.mag) + '</div>'; }).join('');
+  if (absNow.length > 2) pv += '<div class="pv-more">+ ' + (absNow.length - 2) + ' autre' + (absNow.length - 2 > 1 ? 's' : '') + '</div>';
+  document.getElementById('dirs-preview').innerHTML = pv || '<div class="pv-item" style="color:#bbb">Tous les directeurs sont présents</div>';
+
+  // Bloc "qui contacter" pour le jour selectionne (aujourd'hui par defaut)
+  var absSel = STATE.dirs.filter(function(r){ var st = dirsStateOn(r.dir, selDay); return st && st.valide; });
+  var isToday = edevKey(selDay) === edevKey(today);
+  var contact = '<div class="dcontact"><h4>Qui contacter — ' + (isToday ? 'aujourd\'hui, ' : '') + selDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + '</h4>';
+  if (!absSel.length) contact += '<div class="ok">✔ Tous les directeurs sont présents ce jour-là.</div>';
+  else contact += absSel.map(function(r){
+    var st = dirsStateOn(r.dir, selDay);
+    var until = st.fin >= st.debut ? ' (jusqu\'au ' + dirsFmt(st.fin) + ')' : '';
+    var to;
+    if (r.adj){
+      var adjSt = dirsStateOn(r.adj, selDay);
+      if (adjSt && adjSt.valide) to = '<span class="none">Adjoint ' + esc(r.adj.label) + ' également absent</span>';
+      else to = '→ contacter <a href="mailto:' + esc(r.adj.email) + '">' + esc(r.adj.label) + '</a> (adjoint)';
+    } else to = '<span class="none">Pas d\'adjoint renseigné</span>';
+    return '<div class="row"><span class="mag">' + esc(r.mag) + '</span><span class="abs">' + esc(r.dir.label) + ' absent(e)' + esc(until) + ' · ' + esc(dirsTypeLib(st.type)) + '</span><span class="to">' + to + '</span></div>';
+  }).join('');
+  contact += '</div>';
+
+  // Grille du mois
+  var y = DIRS_CUR.getFullYear(), m = DIRS_CUR.getMonth();
+  var nDays = new Date(y, m + 1, 0).getDate();
+  var head = '<th class="first">Magasin · directeur</th>';
+  for (var d = 1; d <= nDays; d++){
+    var dt = new Date(y, m, d), k = edevKey(dt), dow = dt.getDay();
+    head += '<th class="' + (dow === 0 || dow === 6 ? 'wk ' : '') + (k === edevKey(today) ? 'today ' : '') + (DIRS_SEL === k ? 'sel' : '') + '" onclick="dirsSelect(\'' + k + '\')" title="Voir qui contacter ce jour">' + d + '<small>' + N_JOURS[dow] + '</small></th>';
+  }
+  var rowsHtml = '', lastEns = '';
+  STATE.dirs.filter(function(r){ return DIRS_ENS === 'all' || r.ens === DIRS_ENS; }).forEach(function(r){
+    var cells = '', anyAbs = false;
+    for (var d2 = 1; d2 <= nDays; d2++){
+      var dt2 = new Date(y, m, d2), k2 = edevKey(dt2), dow2 = dt2.getDay();
+      var st = dirsStateOn(r.dir, dt2);
+      var cls = 'c' + (dow2 === 0 || dow2 === 6 ? ' wk' : '') + (k2 === edevKey(today) ? ' today' : '') + (DIRS_SEL === k2 ? ' sel' : '');
+      if (st){
+        anyAbs = true;
+        var title = r.dir.label + ' — ' + dirsTypeLib(st.type) + (st.valide ? ' (validé)' : ' (en attente)') + ' du ' + dirsFmt(st.debut) + ' au ' + dirsFmt(st.fin) + (r.adj ? ' · adjoint : ' + r.adj.label : '');
+        cells += '<td class="' + cls + '" title="' + esc(title) + '"><span class="b ' + st.cat + '-' + (st.valide ? 'valide' : 'attente') + '"></span></td>';
+      } else cells += '<td class="' + cls + '"></td>';
+    }
+    if (DIRS_ONLY && !anyAbs) return;
+    if (r.ens !== lastEns){ lastEns = r.ens; rowsHtml += '<tr class="sep"><td colspan="' + (nDays + 1) + '">' + (r.ens === 'GdO' ? 'Générale d\'Optique' : 'Edgard Opticiens') + '</td></tr>'; }
+    rowsHtml += '<tr><td class="first"><div class="mag">' + esc(r.mag) + '</div><div class="who">' +
+      (r.dir.email ? '<a href="mailto:' + esc(r.dir.email) + '">' + esc(r.dir.label) + '</a>' : esc(r.dir.label)) + '</div>' +
+      (r.adj ? '<div class="adj">Adjoint : ' + (r.adj.email ? '<a href="mailto:' + esc(r.adj.email) + '">' + esc(r.adj.label) + '</a>' : esc(r.adj.label)) + '</div>' : '<div class="adj">Pas d\'adjoint</div>') +
+      '</td>' + cells + '</tr>';
+  });
+  if (!rowsHtml) rowsHtml = '<tr><td class="first" colspan="' + (nDays + 1) + '" style="padding:18px;color:#888">Aucune absence de directeur sur ce mois.</td></tr>';
+
+  body.innerHTML = contact +
+    '<div class="ecal-bar"><button onclick="dirsShift(-1)">‹ Précédent</button><span class="lbl">' + EDEV_MOIS[m] + ' ' + y + '</span><button onclick="dirsShift(1)">Suivant ›</button><button onclick="dirsToday()">Aujourd\'hui</button></div>' +
+    '<div class="dfilters">' +
+      '<button class="pill' + (DIRS_ENS === 'all' ? ' on' : '') + '" onclick="dirsEns(\'all\')">Tous</button>' +
+      '<button class="pill' + (DIRS_ENS === 'Edgard' ? ' on' : '') + '" onclick="dirsEns(\'Edgard\')">Edgard</button>' +
+      '<button class="pill' + (DIRS_ENS === 'GdO' ? ' on' : '') + '" onclick="dirsEns(\'GdO\')">GdO</button>' +
+      '<button class="pill' + (DIRS_ONLY ? ' on' : '') + '" onclick="dirsOnly()">Uniquement les absents du mois</button>' +
+    '</div>' +
+    '<div class="ecal-legend">' +
+      '<span class="li"><span class="sw" style="background:var(--green)"></span>CP validé</span>' +
+      '<span class="li"><span class="sw" style="background:#E3F5E9;border:1.5px dashed var(--green)"></span>CP en attente</span>' +
+      '<span class="li"><span class="sw" style="background:var(--orange)"></span>Absence validée</span>' +
+      '<span class="li"><span class="sw" style="background:#FDEBD8;border:1.5px dashed var(--orange)"></span>Absence en attente</span>' +
+      '<span class="li">Cliquez sur un jour pour voir qui contacter ce jour-là</span>' +
+    '</div>' +
+    '<div class="dgrid-wrap"><table class="dgrid"><thead><tr>' + head + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+}
+
 function previewHtml(lines){
   if (!lines.length) return '<div class="pv-item" style="color:#bbb">Rien en attente</div>';
   var shown = lines.slice(0, 2).map(function(t){ return '<div class="pv-item">' + t + '</div>'; }).join('');
@@ -1241,8 +1444,9 @@ function loadAll(){
   var pPlannings = fetch(N8N_PLANNINGS).then(function(r){ return r.json(); }).catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
   var pEdevManuel = edevLoadManual();
+  var pDirs = dirsLoad();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -1250,6 +1454,8 @@ function loadAll(){
     STATE.cpHistorique = demandes.filter(function(d){ return d.statut === 'valide'; })
       .sort(function(a,b){ return new Date(b.date_derniere_action) - new Date(a.date_derniere_action); });
 
+    dirsBuildAbs(demandes);
+    if (results[7] && results[7].length) STATE.dirs = results[7];
     STATE.edevBase = demandes
       .filter(function(d){ return normalizeNom(d.societe).indexOf('EDGARDDEVELOPPEMENT') !== -1; })
       .filter(function(d){ return ['valide','en_attente','telecharge','attente_telechargement'].indexOf(d.statut) !== -1; })
@@ -1276,6 +1482,7 @@ function loadAll(){
     renderSoldes();
     renderPlannings();
     renderEdev();
+    renderDirs();
     edevEnrich().then(function(){ edevRebuild(); renderEdev(); });
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
