@@ -97,6 +97,39 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .var-card button.relance{margin-top:6px;border-color:var(--blue);color:var(--blue)}
 .var-card button.relance:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 .var-card button.relance:disabled{opacity:.55;cursor:default;background:#fff;color:var(--blue)}
+.var-card button.voir{margin-top:8px;border-color:var(--g);color:var(--g);font-weight:600}
+.var-card button.voir:hover{background:var(--g);color:#fff;border-color:var(--g)}
+.var-card button.annuler{border-color:var(--red);color:var(--red)}
+.var-card button.annuler:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.var-final{margin-top:6px;padding:10px 12px;border-top:1px dashed var(--bd);font-size:11px;color:var(--md);line-height:2}
+.var-final .chip{display:inline-flex;align-items:center;gap:5px;background:#F3F9FD;border:1px solid #AED6F1;border-radius:14px;padding:1px 4px 1px 9px;margin:0 4px 0 0;color:#1f618d;font-weight:600}
+.var-final .chip button{border:0;background:none;color:var(--red);cursor:pointer;font-size:10.5px;font-family:'Inter',sans-serif;padding:2px 6px;border-radius:10px}
+.var-final .chip button:hover{background:var(--red);color:#fff}
+#vv-modal{display:none;position:fixed;inset:0;background:rgba(28,23,16,.5);z-index:300;align-items:flex-start;justify-content:center;padding:28px 14px;overflow-y:auto}
+#vv-modal.show{display:flex}
+.vv-box{background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:100%;max-width:1080px;padding:22px 24px 20px;position:relative}
+.vv-x{position:absolute;top:12px;right:14px;border:0;background:none;font-size:22px;line-height:1;color:var(--md);cursor:pointer;padding:4px 8px;border-radius:8px}
+.vv-x:hover{background:var(--lt);color:var(--dk)}
+.vv-box h2{font-family:'Fraunces',serif;font-size:21px;margin:0 28px 2px 0}
+.vv-sub{font-size:12px;color:var(--md);margin-bottom:12px}
+.vv-banner{font-size:12px;padding:8px 12px;border-radius:8px;margin:0 0 12px;line-height:1.45}
+.vv-banner.info{background:#EAF3FB;color:#1f618d;border:1px solid #AED6F1}
+.vv-banner.warn{background:#FEFAF0;color:#a3560f;border:1px solid #F6DCA8}
+.vv-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px}
+.vv-box table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+.vv-box th{background:var(--lt);color:var(--md);font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:left;padding:8px 9px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.vv-box td{padding:8px 9px;border-bottom:1px solid var(--bd);vertical-align:top}
+.vv-box tr:last-child td{border-bottom:0}
+.vv-box .nm{font-weight:600;white-space:nowrap}
+.vv-abs{display:block;white-space:nowrap}
+.vv-abs+.vv-abs{margin-top:3px}
+.vv-tag{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;background:#EFE8D8;color:var(--dk);margin:0 4px}
+.vv-ok{color:#1e7a45;font-weight:700;white-space:nowrap}
+.vv-no{color:#a3560f;white-space:nowrap}
+.vv-dir{margin-top:12px;font-size:12px;color:var(--md)}
+.vv-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.vv-actions a{font-size:11.5px;font-weight:600;color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:16px;padding:5px 13px}
+.vv-actions a:hover{background:var(--blue);color:#fff}
 .var-card .portal{margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd)}
 .var-card .portal a{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:none}
 .var-card .portal a:hover{text-decoration:underline}
@@ -318,6 +351,9 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 
 </div>
 
+<div id="vv-modal" onclick="if(event.target===this)fermerVariable()"><div class="vv-box"><button class="vv-x" type="button" onclick="fermerVariable()" title="Fermer">&times;</button><div id="vv-content"></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <script>
 /* ============================ CONFIG ============================ */
 var RH_CODE = 'Edgard37*'; // code d'accès partagé service RH
@@ -539,12 +575,21 @@ function renderVariables(){
       return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
         '<div class="dir">' + esc(m.directeur) + '</div>' +
         '<span class="badge">' + tagTxt + '</span>' + sig +
+        '<button type="button" class="voir" onclick="voirVariable(\'' + esc(m.code) + '\')">👁 Visualiser</button>' +
         '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>' +
         '<button type="button" class="relance" id="relance-' + esc(m.code) + '" onclick="relancerVariable(\'' + esc(m.code) + '\',\'' + tagCls + '\',' + (m.signatures_ok||0) + ',' + (m.total_salaries||0) + ')">✉️ Relancer</button>' +
         '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a>' +
         '<div class="pin" id="pin-' + esc(m.code) + '">Code : <b>' + esc(pinTxt) + '</b></div></div>' +
         '</div>';
     }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
+    var finalisees = info.magasins.filter(function(m){ return m.finalise_manuel; });
+    if (finalisees.length){
+      body += '<div class="var-final">Finalisées manuellement : ' + finalisees.map(function(m){
+        return '<span class="chip">' + esc(m.code) +
+          '<button type="button" onclick="voirVariable(\'' + esc(m.code) + '\')" title="Visualiser la variable">👁</button>' +
+          '<button type="button" onclick="annulerFinalisation(\'' + esc(m.code) + '\')" title="Annuler la finalisation">↩ annuler</button></span>';
+      }).join('') + '</div>';
+    }
     box.innerHTML = body;
     loadPinsFor(pending.map(function(m){ return m.code; }));
     document.getElementById('var-preview').innerHTML = previewHtml(pending.map(function(m){
@@ -574,10 +619,11 @@ function renderVariables(){
     // sur la période en cours, ce qui bloquait le rattrapage des mois précédents.
     var finaliserBtn = (m.statut !== 'complet')
       ? '<button type="button" onclick="finaliserVariable(\'' + esc(m.code) + '\')">Marquer finalisée</button>'
-      : '';
+      : (m.finalise_manuel ? '<button type="button" class="annuler" onclick="annulerFinalisation(\'' + esc(m.code) + '\')">↩ Annuler la finalisation</button>' : '');
+    var voirBtn = '<button type="button" class="voir" onclick="voirVariable(\'' + esc(m.code) + '\')">👁 Visualiser</button>';
     return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
       '<div class="dir">' + esc(m.directeur) + '</div>' +
-      '<span class="badge">' + tagTxt + '</span>' + sig + finfo + revoirBtn + finaliserBtn +
+      '<span class="badge">' + tagTxt + '</span>' + sig + finfo + voirBtn + revoirBtn + finaliserBtn +
       '</div>';
   }).join('') + '</div>' : '<div class="empty">Aucune donnée pour ' + libellePeriode(info.periode) + '.</div>';
   box.innerHTML = body2;
@@ -628,6 +674,96 @@ function finaliserVariable(code){
     body: JSON.stringify({ magasin_code: code, periode: VAR_PERIODE, finalise: true, finalise_par: 'RH', commentaire: commentaire })
   }).then(function(){ fetchVariables(VAR_PERIODE); })
     .catch(function(){ alert('Erreur lors de la finalisation — réessayez.'); });
+}
+
+function annulerFinalisation(code){
+  if (!confirm('Annuler la finalisation de ' + code + ' pour ' + libellePeriode(VAR_PERIODE) + ' ? Le magasin repassera à son statut réel (non envoyée / incomplète / complète).')) return;
+  fetch(N8N_VAR_FINALIZE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ magasin_code: code, periode: VAR_PERIODE, finalise: false, finalise_par: 'RH', commentaire: 'annulation' })
+  }).then(function(){ fetchVariables(VAR_PERIODE); })
+    .catch(function(){ alert("Erreur lors de l'annulation — réessayez."); });
+}
+
+/* ---------- Visualiser la variable d'un magasin ---------- */
+var N8N_VAR_ETAT_LOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-etat-load';
+function fermerVariable(){ document.getElementById('vv-modal').classList.remove('show'); }
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') fermerVariable(); });
+function vvDate(iso){
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  return m ? (m[3] + '/' + m[2] + '/' + m[1]) : (iso || '');
+}
+function voirVariable(code){
+  var periode = VAR_PERIODE;
+  var info = STATE.variables || {magasins: []};
+  var mag = info.magasins.filter(function(m){ return m.code === code; })[0] || {code: code};
+  var modal = document.getElementById('vv-modal'), box = document.getElementById('vv-content');
+  box.innerHTML = '<h2>' + esc(code) + '</h2><div class="vv-sub">Chargement…</div>';
+  modal.classList.add('show');
+
+  var pData = fetch(VAR_DATA_BASE + encodeURIComponent(code) + '.json', {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+  var pEtat = fetch(N8N_VAR_ETAT_LOAD, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({cle: code + '-' + periode})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.etat || typeof LZString === 'undefined') return null;
+      var js = LZString.decompressFromEncodedURIComponent(d.etat);
+      return js ? JSON.parse(js) : null;
+    }).catch(function(){ return null; });
+
+  Promise.all([pData, pEtat]).then(function(res){
+    var data = res[0], snap = res[1];
+    var collabs = (snap && snap.state && snap.state.length) ? snap.state : ((data && data.collaborateurs) || []);
+    var aEtat = !!(snap && snap.state && snap.state.length);
+    var statutTxt = mag.statut === 'complet' ? (mag.finalise_manuel ? 'Finalisée manuellement' : 'Complète')
+                  : mag.statut === 'incomplet' ? 'Incomplète' : 'Non envoyée';
+    var html = '<h2>' + esc(code) + ' — variable de ' + esc(libellePeriode(periode)) + '</h2>' +
+      '<div class="vv-sub">' + (mag.directeur ? 'Directeur : ' + esc(mag.directeur) + ' · ' : '') + 'Statut : <b>' + esc(statutTxt) + '</b>' +
+      (aEtat ? ' · ' + (mag.signatures_ok || 0) + ' / ' + (mag.total_salaries || collabs.length) + ' signés' : '') + '</div>';
+
+    if (!collabs.length){
+      html += '<div class="vv-banner warn">Impossible de lire la fiche de ce magasin (aucune donnée déposée ni saisie enregistrée).</div>';
+    } else {
+      if (!aEtat){
+        html += '<div class="vv-banner info">Le magasin n\'a encore rien enregistré pour cette période : voici la fiche <b>pré-remplie</b> (données déposées). Les absences et signatures apparaîtront ici dès qu\'elles seront saisies.</div>';
+      }
+      if (data && data.periode && data.periode.mois && data.periode.annee){
+        var pj = data.periode.annee + '-' + String(Number(data.periode.mois) + 1).padStart(2,'0'); // mois 0-based dans data/<mag>.json
+        if (pj !== periode){
+          html += '<div class="vv-banner warn">Attention : les données déposées pour ce magasin sont libellées <b>' + esc(libellePeriode(pj)) + '</b>, pas ' + esc(libellePeriode(periode)) + '.</div>';
+        }
+      }
+      html += '<div class="vv-wrap"><table><thead><tr><th>Salarié</th><th>Tps hebdo</th>' +
+        (aEtat ? '<th>Absences</th>' : '') +
+        '<th>Transport</th><th>Mutuelle</th><th>Tickets resto</th><th>Commentaires</th>' + (aEtat ? '<th>Signature</th>' : '') +
+        '</tr></thead><tbody>' + collabs.map(function(c){
+          var abs = '';
+          if (aEtat){
+            var lignes = (c.absences || []).filter(function(a){ return a && (a.debut || a.fin || a.motif || a.heures || a.joursCP); });
+            abs = '<td>' + (lignes.length ? lignes.map(function(a){
+              var per = a.debut ? (vvDate(a.debut) + (a.fin && a.fin !== a.debut ? ' → ' + vvDate(a.fin) : '')) : '';
+              var det = [];
+              if (a.joursCP) det.push(esc(a.joursCP) + ' j CP');
+              if (a.heures) det.push(esc(a.heures) + ' h');
+              return '<span class="vv-abs">' + esc(per) + (a.motif ? '<span class="vv-tag">' + esc(a.motif) + '</span>' : '') + det.join(' · ') + '</span>';
+            }).join('') : '<span style="color:var(--md)">—</span>') + '</td>';
+          }
+          return '<tr><td class="nm">' + esc(c.nom || '') + ' ' + esc(c.prenom || '') + '</td>' +
+            '<td>' + esc(c.tps || '') + '</td>' + abs +
+            '<td>' + esc(c.transport || '') + '</td><td>' + esc(c.mutuelle || '') + '</td><td>' + esc(c.tr || '') + '</td>' +
+            '<td>' + esc(c.commentaires || '') + '</td>' +
+            (aEtat ? '<td>' + (c.sig ? '<span class="vv-ok">✓ signé</span>' : '<span class="vv-no">à signer</span>') + '</td>' : '') +
+            '</tr>';
+        }).join('') + '</tbody></table></div>';
+      if (aEtat){
+        var dn = ((snap.dirPrenom || '') + ' ' + (snap.dirNom || '')).trim();
+        html += '<div class="vv-dir">Responsable du magasin : ' + (dn ? '<b>' + esc(dn) + '</b>' : '—') + ' · ' +
+          (snap.dirSig ? '<span class="vv-ok">✓ signé</span>' : '<span class="vv-no">signature à venir</span>') + '</div>';
+      }
+    }
+    html += '<div class="vv-actions"><a href="' + esc(VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(code) + '&periode=' + encodeURIComponent(periode)) + '" target="_blank" rel="noopener">Ouvrir dans le portail ↗</a></div>';
+    box.innerHTML = html;
+  });
 }
 
 function relancerVariable(code, statut, signaturesOk, totalSalaries){
