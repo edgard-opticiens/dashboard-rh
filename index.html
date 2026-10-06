@@ -254,6 +254,35 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .soldes-table td.total{font-weight:700}
 .soldes-table td.who{font-weight:600}
 .soldes-table td.poses{color:var(--blue)}
+/* ===== Statistiques portail ===== */
+.st-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.st-kpi{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px 16px}
+.st-kpi .v{font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--dk);line-height:1.1}
+.st-kpi .k{font-size:12px;color:var(--md);margin-top:3px}
+.st-kpi .d{font-size:11.5px;color:var(--md);margin-top:6px}
+.st-kpi .d b{color:var(--dk)}
+.st-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.st-card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px 16px;min-width:0}
+.st-card.wide{grid-column:1/-1}
+.st-card h4{font-size:13px;font-weight:600;color:var(--dk);margin-bottom:2px}
+.st-card .sub{font-size:11.5px;color:var(--md);margin-bottom:12px}
+.st-hbar{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:8px;align-items:center;margin:5px 0;font-size:12.5px}
+.st-hbar .lb{color:var(--dk);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-hbar .tr{background:#F3ECDD;border-radius:0 4px 4px 0;height:12px;position:relative}
+.st-hbar .fi{background:var(--g);height:12px;border-radius:0 4px 4px 0;min-width:2px}
+.st-hbar .nv{color:var(--dk);font-variant-numeric:tabular-nums;font-weight:600;min-width:28px;text-align:right}
+.st-dev{display:flex;gap:2px;height:22px;margin:6px 0 10px}
+.st-dev i{display:block;height:22px;min-width:3px}
+.st-dev i:first-child{border-radius:6px 0 0 6px}.st-dev i:last-child{border-radius:0 6px 6px 0}
+.st-leg{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--dk)}
+.st-leg span.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.st-empty{font-size:12.5px;color:var(--md);padding:14px 2px}
+.st-chart{position:relative}
+.st-chart svg{display:block;width:100%;height:auto}
+.st-tip{position:absolute;pointer-events:none;background:var(--dk);color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,-110%);display:none;z-index:5}
+.st-zero{font-size:12px;color:var(--md);margin-top:10px;line-height:1.5}
+@media(max-width:760px){.st-kpis{grid-template-columns:1fr}.st-grid{grid-template-columns:1fr}.st-hbar{grid-template-columns:minmax(80px,45%) 1fr auto}}
+#sec-stats .panel-toolbar{flex-wrap:wrap;gap:6px 0;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -306,6 +335,7 @@ var N8N_LIEN_COURT = 'https://edgard-opticiens.app.n8n.cloud/webhook/lien-court-
 var N8N_ABS_MOTIFS = 'https://edgard-opticiens.app.n8n.cloud/webhook/absence-motifs';
 var N8N_EDEV_PAYLOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-dev-payload-get';
 var N8N_DIRECTEURS = 'https://edgard-opticiens.app.n8n.cloud/webhook/directeurs-liste';
+var N8N_PORTAIL_STATS = 'https://edgard-opticiens.app.n8n.cloud/webhook/portail-stats?days=190';
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
@@ -419,7 +449,10 @@ var VAR_PERIODE = null;
 
 function togglePanel(id){
   document.getElementById(id).classList.toggle('expanded');
+  if (id === 'sec-stats' && typeof renderStats === 'function') setTimeout(renderStats, 0);
 }
+var STATS_RZ = null;
+window.addEventListener('resize', function(){ clearTimeout(STATS_RZ); STATS_RZ = setTimeout(function(){ if (typeof renderStats === 'function') renderStats(); }, 250); });
 
 function renderCP(){
   var viewEl = document.getElementById('cp-view-select');
@@ -961,12 +994,22 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
+  P.stats = '<div class="panel" id="sec-stats" style="--pc:#A97A2E">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-stats\')"><div><div class="n" id="stats-count">…</div><div class="l">Visites du portail RH (30 derniers jours)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="stats-preview" onclick="togglePanel(\'sec-stats\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><span class="tb-label">Portail :</span><select id="stats-portail" onchange="renderStats()"><option value="">Edgard + GdO</option><option value="EDGARD">Edgard</option><option value="GDO">GdO</option></select>' +
+        '<span class="tb-label" style="margin-left:10px">Période :</span><select id="stats-periode" onchange="renderStats()"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div>' +
+        '<div class="panel-note">Statistiques anonymes : visites, clics sur les outils, connexions à l\'espace directeur (magasin) et type d\'appareil. Pour exclure votre propre appareil, ouvrez le portail une fois avec <b>?nostat=1</b> à la fin de l\'adresse.</div>' +
+        '<div class="panel-body" id="stats-body"></div>' +
+      '</div>' +
+    '</div>';
   function sec(num, title, desc, html){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="panel-grid">' + html + '</div></section>';
   }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis.', P.cp + P.var + P.hsac + P.plannings) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement et planning consolidé des directeurs.', P.soldes + P.edev + P.dirs);
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats);
 }
 
 /* ============================ PLANNING EDGARD DEVELOPPEMENT ============================ */
@@ -1540,6 +1583,139 @@ function previewHtml(lines){
   return shown + more;
 }
 
+/* ============================ STATISTIQUES PORTAIL RH ============================ */
+var STATS_MAG = {
+  EDGARD: ['ANGO','BIARRO','BORDO','CAENPO','GIRO','HAVRO','JISAM','LYONO','MANSO','MARSEILLO','NANCEO','NANTO','NICEO','ORLO','REIMO','STRABO','TURO'],
+  GDO: ['CHATO','CHEMILLO','CHOLO','DUNES','ECUME','FORMIO','MARAIS','MUDO','NIORTO']
+};
+function statsLoad(){
+  return fetch(N8N_PORTAIL_STATS).then(function(r){ return r.json(); }).then(function(j){
+    return { ok: !!(j && j.ok), rows: (j && j.rows) || [] };
+  }).catch(function(){ return { ok: false, rows: [] }; });
+}
+function statsDayKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function statsFmtDay(k){ var p = k.split('-'); return p[2] + '/' + p[1]; }
+function statsNice(max){
+  var steps = [1,2,5,10,20,50,100,200,500,1000,2000,5000];
+  for (var i = 0; i < steps.length; i++){ if (steps[i] * 4 >= max) return steps[i] * 4; }
+  return Math.ceil(max / 4) * 4;
+}
+function statsDelta(cur, prev){
+  if (!prev) return cur ? 'période précédente : 0' : '';
+  var pct = Math.round((cur - prev) / prev * 100);
+  return (pct >= 0 ? '▲ +' : '▼ ') + pct + ' % <span>vs période précédente (' + prev + ')</span>';
+}
+function statsHBars(entries, max){
+  if (!entries.length) return '<div class="st-empty">Aucune donnée sur la période.</div>';
+  return entries.map(function(e){
+    var w = max ? Math.max(1, Math.round(e[1] / max * 100)) : 0;
+    return '<div class="st-hbar"><span class="lb" title="' + esc(e[0]).replace(/"/g,'&quot;') + '">' + esc(e[0]) + '</span><span class="tr"><span class="fi" style="display:block;width:' + w + '%"></span></span><span class="nv">' + e[1] + '</span></div>';
+  }).join('');
+}
+function statsDailyChart(days, vals){
+  var bw0 = (document.getElementById('stats-body') || {}).clientWidth || 700;
+  var W = Math.max(300, Math.min(700, bw0 - 34)), H = 190, L = 34, R = 8, T = 10, B = 24;
+  var pw = W - L - R, ph = H - T - B;
+  var max = statsNice(Math.max.apply(null, vals.concat([1])));
+  var n = days.length, slot = pw / n, gap = n > 45 ? 1 : 2, bw = Math.max(1, slot - gap);
+  var g = '';
+  for (var i = 0; i <= 4; i++){
+    var y = T + ph - ph * i / 4, v = Math.round(max * i / 4);
+    g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#EFE7D6" stroke-width="1"/>' +
+         '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10.5" fill="#78705F">' + v + '</text>';
+  }
+  var bars = '', hits = '';
+  for (var d = 0; d < n; d++){
+    var h = vals[d] / max * ph, x = L + d * slot + gap / 2;
+    if (vals[d] > 0) bars += '<path d="M' + x + ' ' + (T + ph) + 'V' + (T + ph - h + 2) + 'Q' + x + ' ' + (T + ph - h) + ' ' + (x + 2) + ' ' + (T + ph - h) + 'H' + (x + bw - 2) + 'Q' + (x + bw) + ' ' + (T + ph - h) + ' ' + (x + bw) + ' ' + (T + ph - h + 2) + 'V' + (T + ph) + 'Z" fill="#A97A2E"/>';
+    hits += '<rect class="st-hit" data-i="' + d + '" x="' + (L + d * slot) + '" y="' + T + '" width="' + slot + '" height="' + ph + '" fill="transparent"/>';
+  }
+  var step = n <= 7 ? 1 : n <= 31 ? 5 : 15, xl = '';
+  for (var k = 0; k < n; k += step){
+    xl += '<text x="' + (L + k * slot + slot / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10.5" fill="#78705F">' + statsFmtDay(days[k]) + '</text>';
+  }
+  xl += '<text x="' + (L + (n - 1) * slot + slot / 2) + '" y="' + (H - 6) + '" text-anchor="end" font-size="10.5" fill="#78705F"></text>';
+  return '<div class="st-chart" id="st-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Visites par jour">' + g +
+         '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ph) + '" y2="' + (T + ph) + '" stroke="#CFC5AE" stroke-width="1"/>' + bars + xl + hits + '</svg><div class="st-tip" id="st-tip"></div></div>';
+}
+function statsBindTip(days, vals){
+  var box = document.getElementById('st-chart'); if (!box) return;
+  var tip = document.getElementById('st-tip');
+  var JOURS = ['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+  box.querySelectorAll('.st-hit').forEach(function(el){
+    function show(ev){
+      var i = +el.getAttribute('data-i'), p = days[i].split('-'), dt = new Date(+p[0], +p[1]-1, +p[2]);
+      tip.innerHTML = JOURS[dt.getDay()] + ' ' + statsFmtDay(days[i]) + ' — <b>' + vals[i] + '</b> visite' + (vals[i] > 1 ? 's' : '');
+      var r = box.getBoundingClientRect(), rr = el.getBoundingClientRect();
+      tip.style.left = (rr.left - r.left + rr.width / 2) + 'px';
+      tip.style.top = (ev.clientY - r.top) + 'px';
+      tip.style.display = 'block';
+    }
+    el.addEventListener('mousemove', show); el.addEventListener('click', show);
+    el.addEventListener('mouseleave', function(){ tip.style.display = 'none'; });
+  });
+}
+function renderStats(){
+  var body = document.getElementById('stats-body'); if (!body) return;
+  var fp = (document.getElementById('stats-portail') || {}).value || '';
+  var per = +((document.getElementById('stats-periode') || {}).value || 30);
+  var S = STATE.pstats || { ok: false, rows: [] };
+  var today = new Date(); today.setHours(0,0,0,0);
+  function dkey(off){ var d = new Date(today); d.setDate(d.getDate() - off); return statsDayKey(d); }
+  var from = dkey(per - 1), prevFrom = dkey(2 * per - 1), prevTo = dkey(per);
+  var rows = S.rows.filter(function(r){ return !fp || r.p === fp; });
+  var cur = rows.filter(function(r){ return r.j >= from; });
+  var prev = rows.filter(function(r){ return r.j >= prevFrom && r.j <= prevTo; });
+  function sum(list, t){ return list.reduce(function(s, r){ return s + (r.t === t ? r.n : 0); }, 0); }
+  // compteur de la face (30 jours, tous portails)
+  var from30 = dkey(29), all30 = S.rows.filter(function(r){ return r.j >= from30; });
+  var v30 = sum(all30, 'visite'), c30 = sum(all30, 'clic'), d30 = sum(all30, 'dir');
+  var cnt = document.getElementById('stats-count'); if (cnt) cnt.textContent = S.ok ? v30 : '–';
+  var prv = document.getElementById('stats-preview');
+  if (prv) prv.innerHTML = S.ok ? (v30 + c30 + d30 ? '<span>' + c30 + ' clics sur les outils · ' + d30 + ' connexions directeur</span>' : '<span>En attente des premières données</span>') : '<span>Statistiques indisponibles</span>';
+  if (!S.ok){ body.innerHTML = '<div class="st-empty">Impossible de charger les statistiques pour le moment.</div>'; return; }
+  if (!S.rows.length){ body.innerHTML = '<div class="st-empty">Aucune donnée pour l\'instant. Les statistiques se rempliront dès que le portail mis à jour sera en ligne et visité.</div>'; return; }
+
+  var vis = sum(cur, 'visite'), clk = sum(cur, 'clic'), dir = sum(cur, 'dir');
+  var visP = sum(prev, 'visite'), clkP = sum(prev, 'clic'), dirP = sum(prev, 'dir');
+  var split = '';
+  if (!fp){ split = 'Edgard ' + sum(cur.filter(function(r){ return r.p === 'EDGARD'; }), 'visite') + ' · GdO ' + sum(cur.filter(function(r){ return r.p === 'GDO'; }), 'visite'); }
+  var kpis = '<div class="st-kpis">' +
+    '<div class="st-kpi"><div class="v">' + vis + '</div><div class="k">Visites</div><div class="d">' + (split ? '<b>' + split + '</b><br>' : '') + statsDelta(vis, visP) + '</div></div>' +
+    '<div class="st-kpi"><div class="v">' + clk + '</div><div class="k">Clics sur les outils</div><div class="d">' + statsDelta(clk, clkP) + '</div></div>' +
+    '<div class="st-kpi"><div class="v">' + dir + '</div><div class="k">Connexions à l\'espace directeur</div><div class="d">' + statsDelta(dir, dirP) + '</div></div></div>';
+
+  // visites par jour
+  var days = [], idx = {};
+  for (var i = per - 1; i >= 0; i--){ var k = dkey(i); idx[k] = days.length; days.push(k); }
+  var vals = days.map(function(){ return 0; });
+  cur.forEach(function(r){ if (r.t === 'visite' && idx[r.j] != null) vals[idx[r.j]] += r.n; });
+  var daily = '<div class="st-card wide"><h4>Visites par jour</h4><div class="sub">' + statsFmtDay(days[0]) + ' → ' + statsFmtDay(days[days.length-1]) + ' · une visite = une ouverture du portail par session</div>' + statsDailyChart(days, vals) + '</div>';
+
+  // outils
+  var tools = {}; cur.forEach(function(r){ if (r.t === 'clic' && r.c) tools[r.c] = (tools[r.c] || 0) + r.n; });
+  var tl = Object.keys(tools).map(function(k){ return [k, tools[k]]; }).sort(function(a,b){ return b[1] - a[1]; }).slice(0, 10);
+  var toolsCard = '<div class="st-card"><h4>Outils les plus utilisés</h4><div class="sub">Clics sur les cartes du portail (top 10)</div>' + statsHBars(tl, tl.length ? tl[0][1] : 0) + '</div>';
+
+  // magasins
+  var mags = {}; cur.forEach(function(r){ if (r.t === 'dir' && r.m) mags[r.m] = (mags[r.m] || 0) + r.n; });
+  var ml = Object.keys(mags).map(function(k){ return [k, mags[k]]; }).sort(function(a,b){ return b[1] - a[1]; }).slice(0, 12);
+  var pool = fp ? STATS_MAG[fp] : STATS_MAG.EDGARD.concat(STATS_MAG.GDO);
+  var zero = pool.filter(function(m){ return !mags[m]; });
+  var magCard = '<div class="st-card"><h4>Connexions directeur par magasin</h4><div class="sub">Ouvertures de l\'espace directeur (une par visite)</div>' + statsHBars(ml, ml.length ? ml[0][1] : 0) +
+    '<div class="st-zero"><b>Sans connexion sur la période (' + zero.length + '/' + pool.length + ') :</b> ' + (zero.length ? esc(zero.map(function(m){ return m.charAt(0) + m.slice(1).toLowerCase(); }).join(', ')) : 'aucun, tous les magasins se sont connectés') + '</div></div>';
+
+  // appareils
+  var mob = 0, ord = 0; cur.forEach(function(r){ if (r.t === 'visite'){ if (r.a === 'mobile') mob += r.n; else ord += r.n; } });
+  var tot = mob + ord;
+  var devCard = '<div class="st-card wide"><h4>Appareils</h4><div class="sub">Répartition des visites</div>' +
+    (tot ? '<div class="st-dev" role="img" aria-label="Répartition mobile et ordinateur">' + (mob ? '<i style="background:#D6602F;width:' + (mob / tot * 100) + '%" title="Mobile : ' + mob + '"></i>' : '') + (ord ? '<i style="background:#1C1710;width:' + (ord / tot * 100) + '%" title="Ordinateur : ' + ord + '"></i>' : '') + '</div>' +
+      '<div class="st-leg"><span><span class="sw" style="background:#D6602F"></span>Mobile — <b>' + Math.round(mob / tot * 100) + ' %</b> (' + mob + ')</span><span><span class="sw" style="background:#1C1710"></span>Ordinateur — <b>' + Math.round(ord / tot * 100) + ' %</b> (' + ord + ')</span></div>' : '<div class="st-empty">Aucune visite sur la période.</div>') + '</div>';
+
+  body.innerHTML = kpis + '<div class="st-grid">' + daily + toolsCard + magCard + devCard + '</div>';
+  statsBindTip(days, vals);
+}
+
 function loadAll(){
   document.getElementById('lastUpdate').textContent = 'Chargement...';
   buildPanels();
@@ -1559,8 +1735,9 @@ function loadAll(){
   var pEdevManuel = edevLoadManual();
   var pDirs = dirsLoad();
   var pMotifs = absMotifsLoad();
+  var pStats = statsLoad();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -1597,6 +1774,8 @@ function loadAll(){
     renderPlannings();
     renderEdev();
     renderDirs();
+    STATE.pstats = results[9] || { ok: false, rows: [] };
+    renderStats();
     Promise.all([edevEnrich(), dirsEnrich()]).then(function(){ absRebuildAll(); absRenderAll(); });
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
