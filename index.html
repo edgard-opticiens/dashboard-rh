@@ -273,6 +273,18 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .item-card button.delete:disabled{opacity:.55;cursor:default;background:#fff;color:var(--red)}
 .item-card a.consult{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none}
 .item-card a.consult:hover{background:var(--purple);color:#fff}
+.item-card button.detail{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
+.item-card button.detail:hover,.item-card button.detail.open{background:var(--purple);color:#fff}
+.ndf-detail{overflow-x:auto;word-break:break-word;display:none;margin-top:6px;padding:10px 12px;background:#fff;border:1px solid var(--bd);border-radius:8px;font-size:11.5px;line-height:1.45;color:var(--dk,#1A1A1A)}
+.ndf-detail.open{display:block}
+.ndf-detail table{table-layout:auto;width:100%;border-collapse:collapse;margin:4px 0 8px}
+.ndf-detail th{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--md);text-align:left;padding:3px 6px 3px 0;border-bottom:1px solid var(--bd)}
+.ndf-detail td{min-width:0;padding:4px 6px 4px 0;border-bottom:1px solid #f0ece0;vertical-align:top}
+.ndf-detail td.num,.ndf-detail th.num{text-align:right;white-space:nowrap}
+.ndf-detail .sub{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--md);margin:6px 0 2px}
+.ndf-detail a{color:#A97A2E;word-break:break-all}
+.ndf-sig{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;background:#eee;color:#777}
+.ndf-sig.ok{background:#DDF3E4;color:#1d7a3f}
 
 .panel-toolbar input[type=number],.panel-toolbar input[type=text]{font-family:'Inter',sans-serif;font-size:12.5px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);width:90px}
 .panel-toolbar input[type=text]{width:160px}
@@ -411,6 +423,7 @@ var N8N_VARIABLES = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-variable
 var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser-variable-paie';
 var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-relance-manuelle';
 var N8N_CP_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
+var N8N_NDF_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/ndf-relance-manuelle';
 var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-supprimer-manuelle';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
@@ -900,6 +913,73 @@ function supprimerCP(id){
     });
 }
 
+
+/* ===== Notes de frais : détail + relance ===== */
+function safeUrl(u){ u = String(u||''); return /^https:\/\//i.test(u) ? u.replace(/"/g,'%22').replace(/</g,'%3C') : ''; }
+function fmtEur(v){ return (Number(v)||0).toFixed(2).replace('.', ',') + ' €'; }
+function ndfTypeLabel(t){
+  var m = { ik:'Indemnités km', repas:'Repas', deplacements:'Déplacements', divers:'Divers', hebergement:'Hébergement' };
+  return m[String(t||'').toLowerCase()] || (t || '—');
+}
+function ndfDetailHtml(id){
+  var n = (STATE.ndf || []).filter(function(x){ return x.id === id; })[0];
+  if (!n) return '<em>Détail indisponible.</em>';
+  var h = '<div class="sub">Période</div><div>' + esc((n.mois || '—') + ' ' + (n.annee || '')) + (n.cv ? ' — ' + esc(n.cv) + ' CV' : '') + (n.ts ? ' — saisie le ' + esc(n.ts) : '') + '</div>';
+  h += '<div class="sub">Lignes de frais</div>';
+  if (n.lignes && n.lignes.length){
+    h += '<table><tr><th>Type</th><th>Date</th><th>Motif</th><th class="num">Km</th><th class="num">TTC</th></tr>';
+    n.lignes.forEach(function(l){
+      h += '<tr><td>' + esc(ndfTypeLabel(l.type)) + '</td><td>' + esc(l.date || '') + '</td><td>' + esc(l.motif || '') + '</td><td class="num">' + (l.km ? esc(l.km) : '') + '</td><td class="num">' + fmtEur(l.ttc) + '</td></tr>';
+    });
+    h += '<tr><td colspan="4"><strong>Total</strong></td><td class="num"><strong>' + fmtEur(n.montant) + '</strong></td></tr></table>';
+  } else { h += '<div>Aucune ligne.</div>'; }
+  h += '<div class="sub">Justificatifs</div>';
+  if (n.justificatifs && n.justificatifs.length){
+    h += n.justificatifs.map(function(j){
+      var u = safeUrl(j.webUrl);
+      return '<div>' + (u ? '📎 <a href="' + u + '" target="_blank" rel="noopener">' + esc(j.nomFichier || 'Justificatif') + '</a>' : '⚠️ ' + esc(j.nomFichier || 'Justificatif') + ' (fichier indisponible)') + '</div>';
+    }).join('');
+  } else { h += '<div>Aucun justificatif.</div>'; }
+  var sg = n.signatures || {};
+  h += '<div class="sub">Signatures</div><div>' +
+    '<span class="ndf-sig' + (sg.collaborateur ? ' ok' : '') + '">Collaborateur' + (sg.collaborateur ? ' ✔' : '') + '</span>' +
+    '<span class="ndf-sig' + (sg.directeur ? ' ok' : '') + '">Directeur' + (sg.directeur ? ' ✔' : '') + '</span>' +
+    (n.etape === 'reseau' || sg.reseau ? '<span class="ndf-sig' + (sg.reseau ? ' ok' : '') + '">Dir. réseau' + (sg.reseau ? ' ✔' : '') + '</span>' : '') +
+    '<span class="ndf-sig">Julien Deruy</span></div>';
+  h += '<div class="sub">En attente de</div><div><strong>' + esc(n.en_attente_nom || n.etape) + '</strong></div>';
+  return h;
+}
+function ndfToggleDetail(id){
+  var did = domId(id);
+  var box = document.getElementById('detail-ndf-' + did);
+  var btn = document.getElementById('detail-ndf-btn-' + did);
+  if (!box) return;
+  var open = box.classList.toggle('open');
+  if (btn){ btn.classList.toggle('open', open); btn.textContent = open ? '🙈 Masquer le détail' : '👁️ Voir le détail'; }
+}
+function relancerNDF(id){
+  var n = (STATE.ndf || []).filter(function(x){ return x.id === id; })[0];
+  if (!n){ alert("Note de frais introuvable — actualisez le tableau et réessayez."); return; }
+  if (!confirm('Envoyer un e-mail de rappel à ' + (n.en_attente_nom || 'la personne en attente') + ' pour la note de frais de ' + (n.prenom||'') + ' ' + (n.nom||'') + ' (' + fmtEur(n.montant) + ') ?')) return;
+  var btn = document.getElementById('relance-ndf-' + domId(id));
+  var reset = function(){ if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; } };
+  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  authFetch(N8N_NDF_RELANCE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: n.id })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        if (btn){ btn.textContent = '✔️ Envoyé'; }
+        setTimeout(reset, 4000);
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de l'envoi de la relance — réessayez (votre session a peut-être expiré).");
+        reset();
+      }
+    })
+    .catch(function(){ alert("Erreur lors de l'envoi de la relance — réessayez."); reset(); });
+}
+
 function renderHsAc(){
   var hs = STATE.hs.map(function(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
@@ -911,14 +991,22 @@ function renderHsAc(){
   });
   var nd = (STATE.ndf || []).map(function(r){
     var ttc = Number(r.montant) || 0;
-    return { who: esc(((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()).trim() || 'Note de frais'), soc: esc(r.societe), tag: r.etape,
+    return { ndfId: r.id, who: esc(((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()).trim() || 'Note de frais'), soc: esc(r.societe), tag: r.etape,
       label: r.en_attente_nom ? ('Attente signature ' + r.en_attente_nom) : (NDF_ETAPE_LABEL[r.etape] || r.etape),
       type: 'Note de frais' + (ttc ? ' (' + ttc.toFixed(2).replace('.', ',') + ' €)' : ''), maj: r.date_maj };
   });
   var all = hs.concat(ac).concat(nd);
   var body = all.length ? '<div class="item-grid">' + all.map(function(r){
+    var extra = '';
+    if (r.ndfId){
+      var did = domId(r.ndfId);
+      extra = '<div class="btnrow">' +
+        '<button type="button" class="detail" id="detail-ndf-btn-' + did + '" onclick="ndfToggleDetail(\'' + attrSafe(r.ndfId) + '\')">👁️ Voir le détail</button>' +
+        '<button type="button" class="relance" id="relance-ndf-' + did + '" onclick="relancerNDF(\'' + attrSafe(r.ndfId) + '\')">✉️ Relancer</button></div>' +
+        '<div class="ndf-detail" id="detail-ndf-' + did + '">' + ndfDetailHtml(r.ndfId) + '</div>';
+    }
     return '<div class="item-card ' + r.tag + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
-      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
+      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' + extra +
       '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
   }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup, d\'acompte ou de note de frais en attente.</div>';
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
