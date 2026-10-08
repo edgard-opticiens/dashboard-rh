@@ -70,7 +70,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .panel-toolbar{display:flex;justify-content:flex-end;margin-bottom:6px}
 .panel-toolbar select{font-family:'Inter',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
 .tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:3px 8px;border-radius:5px;flex:0 0 auto;white-space:nowrap}
-.tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp{background:#FDEBD8;color:#a3560f}
+.tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp,.tag.directeur,.tag.deruy{background:#FDEBD8;color:#a3560f}
 .tag.non_envoye{background:#FADBD8;color:#943126}
 .tag.complet{background:#D5F5E3;color:#1e7a45}
 .empty{color:var(--md);font-size:12.5px;padding:14px 0;text-align:center}
@@ -525,6 +525,7 @@ function fmtDateISO(iso){
 }
 
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
+var NDF_ETAPE_LABEL = { directeur: 'Attente signature Directeur', reseau: 'Attente signature Directeur Réseau', deruy: 'Attente signature Julien Deruy' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
 var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
@@ -546,7 +547,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {} };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], ndf: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {} };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -908,12 +909,18 @@ function renderHsAc(){
     return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape,
       label: AC_ETAPE_LABEL[r.etape] || r.etape, type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), maj: r.date_maj };
   });
-  var all = hs.concat(ac);
+  var nd = (STATE.ndf || []).map(function(r){
+    var ttc = Number(r.montant) || 0;
+    return { who: esc(((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()).trim() || 'Note de frais'), soc: esc(r.societe), tag: r.etape,
+      label: r.en_attente_nom ? ('Attente signature ' + r.en_attente_nom) : (NDF_ETAPE_LABEL[r.etape] || r.etape),
+      type: 'Note de frais' + (ttc ? ' (' + ttc.toFixed(2).replace('.', ',') + ' €)' : ''), maj: r.date_maj };
+  });
+  var all = hs.concat(ac).concat(nd);
   var body = all.length ? '<div class="item-grid">' + all.map(function(r){
     return '<div class="item-card ' + r.tag + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
       '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
       '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
-  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup, d\'acompte ou de note de frais en attente.</div>';
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
   document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
@@ -1138,7 +1145,7 @@ function buildPanels(){
       '</div>' +
     '</div>';
   P.hsac = '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes / notes de frais en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
     '</div>';
@@ -1911,6 +1918,7 @@ function loadAll(){
   var pCP = authRead('demandes').catch(function(){ return { data: [], archive: [] }; });
   var pHS = authRead('hs').catch(function(){ return { data: [] }; });
   var pAC = authRead('acompte').catch(function(){ return { data: [] }; });
+  var pNDF = authRead('ndf').catch(function(){ return { data: [] }; });
   var pSoldes = authRead('soldes').catch(function(){ return { tout: {} }; });
   var pPlannings = authRead('plannings').catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
@@ -1919,7 +1927,7 @@ function loadAll(){
   var pMotifs = absMotifsLoad();
   var pStats = statsLoad();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pNDF]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -1941,6 +1949,7 @@ function loadAll(){
 
     STATE.hs = (results[1] && results[1].data) || [];
     STATE.acompte = (results[2] && results[2].data) || [];
+    STATE.ndf = (results[10] && results[10].data) || [];
 
     var soldesParsed = buildSoldesFlat((results[3] && results[3].tout) || {}, (results[3] && results[3].futuresCP) || {});
     STATE.soldes = soldesParsed.list;
