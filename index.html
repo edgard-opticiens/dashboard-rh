@@ -285,6 +285,25 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .ndf-detail a{color:#A97A2E;word-break:break-all}
 .ndf-sig{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;background:#eee;color:#777}
 .ndf-sig.ok{background:#DDF3E4;color:#1d7a3f}
+.ndf-histo button.detail,.ndf-histo-box button.detail{display:inline-block;font-size:10px;padding:5px 12px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
+.ndf-histo button.detail:hover,.ndf-histo button.detail.open,.ndf-histo-box button.detail:hover{background:var(--purple);color:#fff}
+.ndf-histo{margin-top:18px;padding-top:14px;border-top:1px dashed var(--bd)}
+.ndf-histo-box{display:none;margin-top:10px}
+.ndf-histo-box.open{display:block}
+.ndf-histo-box input.hs{width:100%;max-width:340px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;margin-bottom:8px}
+.ndf-histo-box table{width:100%;border-collapse:collapse;font-size:12px}
+.ndf-histo-box th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--md);text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--bd)}
+.ndf-histo-box td{padding:7px 8px 7px 0;border-bottom:1px solid #f0ece0;vertical-align:middle}
+.ndf-histo-box td.num,.ndf-histo-box th.num{text-align:right;white-space:nowrap}
+.ndf-histo-wrap{overflow-x:auto}
+.ndf-modal{position:fixed;inset:0;background:rgba(20,20,20,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
+.ndf-modal-in{background:#fff;border-radius:12px;max-width:840px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.ndf-modal-bar{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #e5e0d3;position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0}
+.ndf-modal-bar button{font-size:12px;padding:6px 12px;border-radius:16px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
+.ndf-modal-bar button:hover{background:var(--purple);color:#fff}
+.ndf-modal-body{padding:6px 10px 16px}
+.ndf-modal-just{padding:0 18px 18px;font-size:12px}
+.ndf-modal-just a{color:#A97A2E;word-break:break-all}
 
 .panel-toolbar input[type=number],.panel-toolbar input[type=text]{font-family:'Inter',sans-serif;font-size:12.5px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);width:90px}
 .panel-toolbar input[type=text]{width:160px}
@@ -980,6 +999,128 @@ function relancerNDF(id){
     .catch(function(){ alert("Erreur lors de l'envoi de la relance — réessayez."); reset(); });
 }
 
+
+/* ===== Notes de frais : historique des notes signées + visualisation ===== */
+var NDF_HISTO_OPEN = false, NDF_HISTO = null, NDF_HISTO_FILTER = '';
+var NDF_BAREME = {3:0.329,4:0.406,5:0.436,6:0.465,7:0.497,8:0.497,9:0.497};
+function ndfTaux(cv){ var c = Math.round(+cv) || 3; if (c < 3) c = 3; if (c > 9) c = 9; return NDF_BAREME[c]; }
+function ndfDateFr(iso){ var d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
+function ndfHistoHtml(){
+  if (NDF_HISTO === 'chargement') return '<div class="empty">Chargement…</div>';
+  if (NDF_HISTO === 'erreur') return '<div class="empty">Impossible de charger l\'historique — réessayez.</div>';
+  if (!NDF_HISTO) return '';
+  var f = NDF_HISTO_FILTER.toLowerCase();
+  var list = NDF_HISTO.filter(function(r){
+    if (!f) return true;
+    return ((r.prenom||'') + ' ' + (r.nom||'') + ' ' + (r.societe||'') + ' ' + (r.mois||'') + ' ' + (r.annee||'')).toLowerCase().indexOf(f) !== -1;
+  });
+  var h = '<input class="hs" id="ndf-histo-search" type="text" placeholder="Rechercher (nom, société, mois…)" value="' + esc(NDF_HISTO_FILTER).replace(/"/g,'&quot;') + '" oninput="ndfHistoFilter(this.value)">';
+  h += '<div style="font-size:11px;color:var(--md);margin-bottom:6px">' + list.length + ' note(s) signée(s)</div>';
+  if (!list.length) return h + '<div class="empty">Aucune note de frais signée.</div>';
+  h += '<div class="ndf-histo-wrap"><table><tr><th>Signée le</th><th>Collaborateur</th><th>Société</th><th>Période</th><th class="num">Montant</th><th class="num">PJ</th><th></th></tr>';
+  list.forEach(function(r){
+    h += '<tr><td>' + esc(ndfDateFr(r.date_maj)) + '</td><td><strong>' + esc((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()) + '</strong></td><td>' + esc(r.societe) + '</td><td>' + esc((r.mois||'') + ' ' + (r.annee||'')) + '</td><td class="num">' + fmtEur(r.montant) + '</td><td class="num">' + (r.nb_justificatifs || 0) + '</td>' +
+      '<td><button type="button" class="detail" id="ndf-fiche-' + domId(r.id) + '" onclick="ndfOuvrirFiche(\'' + attrSafe(r.id) + '\')">👁️ Voir la note</button></td></tr>';
+  });
+  return h + '</table></div>';
+}
+function ndfHistoRefresh(){
+  var box = document.getElementById('ndf-histo-box');
+  if (box) box.innerHTML = ndfHistoHtml();
+}
+function ndfHistoFilter(v){
+  NDF_HISTO_FILTER = v || '';
+  var box = document.getElementById('ndf-histo-box');
+  if (!box) return;
+  var pos = (document.getElementById('ndf-histo-search') || {}).selectionStart;
+  box.innerHTML = ndfHistoHtml();
+  var inp = document.getElementById('ndf-histo-search');
+  if (inp){ inp.focus(); try{ inp.setSelectionRange(pos, pos); }catch(e){} }
+}
+function ndfToggleHisto(){
+  NDF_HISTO_OPEN = !NDF_HISTO_OPEN;
+  var box = document.getElementById('ndf-histo-box'), btn = document.getElementById('ndf-histo-btn');
+  if (box) box.classList.toggle('open', NDF_HISTO_OPEN);
+  if (btn){ btn.classList.toggle('open', NDF_HISTO_OPEN); btn.textContent = NDF_HISTO_OPEN ? '🙈 Masquer l\'historique des notes de frais signées' : '📚 Historique des notes de frais signées'; }
+  if (NDF_HISTO_OPEN && (!NDF_HISTO || NDF_HISTO === 'erreur')){
+    NDF_HISTO = 'chargement'; ndfHistoRefresh();
+    authRead('ndf_histo').then(function(res){ NDF_HISTO = (res && res.data) || []; ndfHistoRefresh(); })
+      .catch(function(){ NDF_HISTO = 'erreur'; ndfHistoRefresh(); });
+  } else { ndfHistoRefresh(); }
+}
+function ndfSigSvg(strokes){
+  if (!strokes || !strokes.length) return '<div style="height:58px;display:flex;align-items:center;justify-content:center;color:#bbb;font-style:italic;font-size:11px">Non signé</div>';
+  var paths = '';
+  strokes.forEach(function(st){
+    if (!st || st.length < 1) return;
+    var d = 'M ' + st[0][0] + ' ' + st[0][1];
+    for (var i = 1; i < st.length; i++) d += ' L ' + st[i][0] + ' ' + st[i][1];
+    paths += '<path d="' + d + '" fill="none" stroke="#0b3d62" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
+  });
+  return '<svg viewBox="0 0 600 155" preserveAspectRatio="xMidYMid meet" style="height:58px;width:100%;background:#fff">' + paths + '</svg>';
+}
+function ndfDocHtml(p){
+  var t = ndfTaux(p.cv || 3), byType = {}, totTVA = 0, totTTC = 0, rowsTbl = '';
+  var td = 'border:1px solid #d8dee6;padding:6px 8px;vertical-align:top;';
+  (p.lignes || []).forEach(function(l){
+    var ttc = Number(l.ttc) || 0;
+    if (l.type !== 'ik' && l.type !== 'hotelTrain') totTVA += Number(l.tva) || 0;
+    byType[l.type] = (byType[l.type] || 0) + ttc; totTTC += ttc;
+    var htC, tvaC;
+    if (l.type === 'ik'){ htC = (Number(l.km)||0) + ' km × ' + String(t).replace('.', ',') + ' €'; tvaC = '—'; }
+    else if (l.type === 'hotelTrain'){ htC = '— (TTC)'; tvaC = 'non récup.'; }
+    else { htC = fmtEur(l.ht); tvaC = fmtEur(l.tva); }
+    var dt = l.date ? String(l.date).split('-').reverse().join('/') : '';
+    rowsTbl += '<tr><td style="' + td + '">' + esc(dt) + '</td><td style="' + td + '">' + esc(ndfTypeLabel(l.type)) + '</td><td style="' + td + 'word-break:break-word">' + esc(l.motif || '') + '</td>' +
+      '<td style="' + td + 'text-align:right;white-space:nowrap">' + htC + '</td><td style="' + td + 'text-align:right;white-space:nowrap">' + tvaC + '</td><td style="' + td + 'text-align:right;white-space:nowrap">' + fmtEur(ttc) + '</td></tr>';
+  });
+  var th = 'border:1px solid #d8dee6;background:#eef2f6;color:#0b3d62;padding:6px 8px;font-size:11px;';
+  var recap = '<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:#ffe9a8"><span>Total TVA (récupérable)</span><span>' + fmtEur(totTVA) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:6px;border-top:2px solid rgba(255,255,255,.4);font-size:17px;font-weight:800"><span>TOTAL GÉNÉRAL TTC</span><span>' + fmtEur(totTTC) + '</span></div>';
+  var sigBlocks = [['sigC','Collaborateur'],['sigD','Directeur'],['sigR','Directeur réseau'],['sigJ','Julien DERUY']];
+  var nbSig = 0, sigsHTML = '';
+  sigBlocks.forEach(function(sb){
+    if (!p[sb[0]]) return; nbSig++;
+    sigsHTML += '<div style="border:1px solid #d8dee6;border-radius:8px;padding:8px;text-align:center"><div style="font-size:11px;color:#5b6470;font-weight:600;margin-bottom:4px">' + sb[1] + '</div>' + ndfSigSvg(p[sb[0]]) + '<div style="font-size:10px;color:#9aa3ae">' + esc(p.ts || '') + '</div></div>';
+  });
+  return '<div style="padding:18px;font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#1c2530;font-size:12px;background:#fff">' +
+    '<div style="border-bottom:2px solid #0b3d62;padding-bottom:8px;margin-bottom:12px"><div style="font-size:18px;font-weight:800;color:#0b3d62">NOTE DE FRAIS</div><div style="font-size:12px;color:#5b6470">Edgard Opticiens · Générale d\'Optique</div></div>' +
+    '<div style="margin-bottom:12px;font-size:13px;line-height:1.7"><div><b>Société :</b> ' + esc(p.soc || '') + '</div><div><b>Nom et prénom :</b> ' + esc(p.nom || '') + ' ' + esc(p.prenom || '') + '</div><div><b>Mois et année :</b> ' + esc(p.mois || '') + ' ' + esc(p.annee || '') + '</div></div>' +
+    '<table style="width:100%;border-collapse:collapse"><tr><th style="' + th + 'text-align:left">Date</th><th style="' + th + 'text-align:left">Type</th><th style="' + th + 'text-align:left">Motif</th><th style="' + th + 'text-align:right">HT</th><th style="' + th + 'text-align:right">TVA</th><th style="' + th + 'text-align:right">TTC</th></tr>' + rowsTbl + '</table>' +
+    '<div style="margin-top:12px;background:#0b3d62;color:#fff;border-radius:10px;padding:12px;font-size:13px">' + recap + '</div>' +
+    (nbSig ? '<div style="display:grid;grid-template-columns:repeat(' + nbSig + ',1fr);gap:10px;margin-top:14px">' + sigsHTML + '</div>' : '') +
+  '</div>';
+}
+function ndfFermerFiche(){ var m = document.getElementById('ndf-modal'); if (m) m.remove(); }
+function ndfImprimerFiche(){
+  var c = document.getElementById('ndf-modal-print'); if (!c) return;
+  var w = window.open('', '_blank'); if (!w){ alert("Autorisez l'ouverture de fenêtres pour imprimer."); return; }
+  w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Note de frais</title></head><body style="margin:0">' + c.innerHTML + '</body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
+}
+function ndfOuvrirFiche(id){
+  var btn = document.getElementById('ndf-fiche-' + domId(id));
+  if (btn){ btn.disabled = true; btn.textContent = 'Ouverture…'; }
+  var reset = function(){ if (btn){ btn.disabled = false; btn.textContent = '👁️ Voir la note'; } };
+  authRead('ndf_fiche', {id: id}).then(function(res){
+    reset();
+    var f = res && res.data;
+    if (!f || !f.payload){ alert('Note introuvable.'); return; }
+    var p = f.payload, just = Array.isArray(p.justificatifs) ? p.justificatifs : [];
+    var jh = just.length ? just.map(function(j){
+      var u = safeUrl(j.webUrl);
+      return '<div>' + (u ? '📎 <a href="' + u + '" target="_blank" rel="noopener">' + esc(j.nomFichier || 'Justificatif') + '</a>' : '⚠️ ' + esc(j.nomFichier || 'Justificatif') + ' (fichier indisponible)') + '</div>';
+    }).join('') : '<div>Aucun justificatif joint.</div>';
+    ndfFermerFiche();
+    var m = document.createElement('div'); m.id = 'ndf-modal'; m.className = 'ndf-modal';
+    m.onclick = function(e){ if (e.target === m) ndfFermerFiche(); };
+    m.innerHTML = '<div class="ndf-modal-in"><div class="ndf-modal-bar"><strong>Note de frais — ' + esc(((p.prenom||'') + ' ' + (p.nom||'')).trim()) + '</strong><span><button type="button" onclick="ndfImprimerFiche()">🖨️ Imprimer / PDF</button> <button type="button" onclick="ndfFermerFiche()">✕ Fermer</button></span></div>' +
+      '<div class="ndf-modal-body" id="ndf-modal-print">' + ndfDocHtml(p) + '</div>' +
+      '<div class="ndf-modal-just"><strong>Justificatifs</strong>' + jh + '<div style="margin-top:8px;color:#999">Dernière signature : ' + esc(ndfDateFr(f.date_maj)) + '</div></div></div>';
+    document.body.appendChild(m);
+  }).catch(function(){ reset(); alert("Impossible d'ouvrir la note — réessayez."); });
+}
+
 function renderHsAc(){
   var hs = STATE.hs.map(function(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
@@ -1009,6 +1150,7 @@ function renderHsAc(){
       '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' + extra +
       '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
   }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup, d\'acompte ou de note de frais en attente.</div>';
+  body += '<div class="ndf-histo"><button type="button" class="detail' + (NDF_HISTO_OPEN ? ' open' : '') + '" id="ndf-histo-btn" onclick="ndfToggleHisto()">' + (NDF_HISTO_OPEN ? '🙈 Masquer l\'historique des notes de frais signées' : '📚 Historique des notes de frais signées') + '</button><div class="ndf-histo-box' + (NDF_HISTO_OPEN ? ' open' : '') + '" id="ndf-histo-box">' + (NDF_HISTO_OPEN ? ndfHistoHtml() : '') + '</div></div>';
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
   document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
