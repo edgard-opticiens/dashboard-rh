@@ -347,6 +347,49 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .st-zero{font-size:12px;color:var(--md);margin-top:10px;line-height:1.5}
 @media(max-width:760px){.st-kpis{grid-template-columns:1fr}.st-grid{grid-template-columns:1fr}.st-hbar{grid-template-columns:minmax(80px,45%) 1fr auto}}
 #sec-stats .panel-toolbar{flex-wrap:wrap;gap:6px 0;justify-content:flex-end}
+
+/* ===== Directeurs absents : vue mobile (cartes) ===== */
+.dmob,.dm-datebar{display:none}
+.dm-ens{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--md);margin:14px 2px 8px}
+.dm-card{border:1px solid var(--bd);border-radius:12px;background:#fff;padding:12px 14px;margin-bottom:10px}
+.dm-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.dm-mag{font-weight:700;font-size:15px;color:var(--dk);line-height:1.2}
+.dm-who{font-size:13px;color:#555;margin-top:2px}
+.dm-who a{color:inherit;text-decoration:none;border-bottom:1px dotted #aaa}
+.dm-badge{flex:0 0 auto;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:#FDEBD8;color:#a3560f;white-space:nowrap}
+.dm-adj{font-size:12px;color:#8a8a8a;margin-top:6px}
+.dm-adj a{color:inherit;text-decoration:none;border-bottom:1px dotted #bbb}
+.dm-abs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.dm-it{display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:4px solid #ccc;background:#f7f5f0;border-radius:6px;padding:7px 10px}
+.dm-it .d{font-weight:700;font-size:13px;color:var(--dk)}
+.dm-it .t{display:block;font-size:11.5px;color:#666;margin-top:1px}
+.dm-it.cp-valide{border-left-color:var(--green);background:#E3F5E9}
+.dm-it.cp-attente{border-left:4px dashed var(--green);background:#F3FBF6}
+.dm-it.rtt-valide{border-left-color:var(--blue);background:#DCEAF5}
+.dm-it.rtt-attente{border-left:4px dashed var(--blue);background:#EEF5FA}
+.dm-it.abs-valide{border-left-color:var(--orange);background:#FDEBD8}
+.dm-it.abs-attente{border-left:4px dashed var(--orange);background:#FEF5EC}
+.dm-pick{flex:0 0 auto;font-family:'Inter',sans-serif;font-size:11.5px;padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
+.dm-none{font-size:12px;color:#aaa}
+.dm-datebar label{font-size:12px;color:var(--md)}
+.dm-datebar input[type=date]{font-family:'Inter',sans-serif;font-size:16px;padding:7px 10px;border:1.5px solid var(--bd);border-radius:8px;background:#fff;color:var(--dk);min-width:0}
+@media(max-width:640px){
+  #sec-dirs.expanded .panel-detail{padding:14px 12px 18px}
+  #sec-dirs .dgrid-wrap{display:none}
+  #sec-dirs .dmob{display:block}
+  #sec-dirs .dm-datebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  #sec-dirs .dmob-hide{display:none}
+  #sec-dirs .ecal-bar{gap:8px}
+  #sec-dirs .ecal-bar .lbl{order:-1;flex:1 0 100%;min-width:0}
+  #sec-dirs .ecal-bar button{flex:1 1 0;padding:10px 6px;font-size:13px}
+  #sec-dirs .dfilters button.pill{padding:9px 14px;font-size:12.5px}
+  #sec-dirs .dcontact{padding:12px}
+  #sec-dirs .dcontact .row{flex-direction:column;align-items:flex-start;gap:3px;padding:10px 0}
+  #sec-dirs .dcontact .mag{min-width:0;font-size:14px}
+  #sec-dirs .dcontact .to{flex:1 1 auto}
+  #sec-dirs .dcontact .to a{display:inline-block;padding:5px 0}
+  #sec-dirs .ecal-legend{justify-content:flex-start;gap:6px 14px}
+}
 </style>
 </head>
 <body>
@@ -1905,6 +1948,7 @@ function dirsToday(){ var t = new Date(); DIRS_CUR = new Date(t.getFullYear(), t
 function dirsSelect(k){ DIRS_SEL = (DIRS_SEL === k ? null : k); renderDirs(); }
 function dirsEns(v){ DIRS_ENS = v; renderDirs(); }
 function dirsOnly(){ DIRS_ONLY = !DIRS_ONLY; renderDirs(); }
+function dirsPickDate(v){ if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return; DIRS_SEL = v; var d = new Date(v + 'T00:00:00'); DIRS_CUR = new Date(d.getFullYear(), d.getMonth(), 1); renderDirs(); }
 
 function renderDirs(){
   var panel = document.getElementById('sec-dirs');
@@ -1954,20 +1998,37 @@ function renderDirs(){
     var dt = new Date(y, m, d), k = edevKey(dt), dow = dt.getDay();
     head += '<th class="' + (dow === 0 || dow === 6 ? 'wk ' : '') + (k === edevKey(today) ? 'today ' : '') + (DIRS_SEL === k ? 'sel' : '') + '" onclick="dirsSelect(\'' + k + '\')" title="Voir qui contacter ce jour">' + d + '<small>' + N_JOURS[dow] + '</small></th>';
   }
-  var rowsHtml = '', lastEns = '';
+  var rowsHtml = '', lastEns = '', mobHtml = '', lastEnsM = '';
   STATE.dirs.filter(function(r){ return DIRS_ENS === 'all' || r.ens === DIRS_ENS; }).forEach(function(r){
-    var cells = '', anyAbs = false;
+    var cells = '', anyAbs = false, seenAbs = {}, absItems = [];
     for (var d2 = 1; d2 <= nDays; d2++){
       var dt2 = new Date(y, m, d2), k2 = edevKey(dt2), dow2 = dt2.getDay();
       var st = dirsStateOn(r.dir, dt2);
       var cls = 'c' + (dow2 === 0 || dow2 === 6 ? ' wk' : '') + (k2 === edevKey(today) ? ' today' : '') + (DIRS_SEL === k2 ? ' sel' : '');
       if (st){
         anyAbs = true;
+        var ik = String(st.rid) + '|' + edevKey(st.debut) + '|' + edevKey(st.fin) + '|' + st.cat + '|' + (st.valide ? 1 : 0);
+        if (!seenAbs[ik]){ seenAbs[ik] = 1; absItems.push(st); }
         var title = r.dir.label + ' — ' + dirsTypeLib(st) + (st.valide ? ' (validé)' : ' (en attente)') + ' du ' + dirsFmt(st.debut) + ' au ' + dirsFmt(st.fin) + (r.adj ? ' · adjoint : ' + r.adj.label : '') + (st.cat !== 'cp' ? ' · cliquer pour préciser le type' : '');
         cells += '<td class="' + cls + (st.cat !== 'cp' ? ' pick' : '') + '" title="' + esc(title) + '"' + (st.cat !== 'cp' ? ' onclick="absPick(\'' + attrSafe(String(st.rid)) + '\')"' : '') + '><span class="b ' + st.cat + '-' + (st.valide ? 'valide' : 'attente') + '"></span></td>';
       } else cells += '<td class="' + cls + '"></td>';
     }
     if (DIRS_ONLY && !anyAbs) return;
+    // --- carte mobile ---
+    if (r.ens !== lastEnsM){ lastEnsM = r.ens; mobHtml += '<div class="dm-ens">' + (r.ens === 'GdO' ? 'Générale d\'Optique' : 'Edgard Opticiens') + '</div>'; }
+    var stSel = dirsStateOn(r.dir, selDay);
+    var badge = (stSel && stSel.valide) ? '<span class="dm-badge">Absent(e)' + (edevKey(selDay) === edevKey(today) ? ' aujourd\'hui' : ' ce jour-là') + '</span>' : '';
+    var itemsHtml = absItems.map(function(it){
+      var lbl = edevKey(it.debut) === edevKey(it.fin)
+        ? it.debut.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' })
+        : dirsFmt(it.debut) + ' → ' + dirsFmt(it.fin);
+      return '<div class="dm-it ' + it.cat + '-' + (it.valide ? 'valide' : 'attente') + '"><div><span class="d">' + esc(lbl) + '</span><span class="t">' + esc(dirsTypeLib(it)) + (it.valide ? ' · validé' : ' · en attente') + '</span></div>' +
+        (it.cat !== 'cp' ? '<button class="dm-pick" onclick="absPick(\'' + attrSafe(String(it.rid)) + '\')">Préciser</button>' : '') + '</div>';
+    }).join('');
+    mobHtml += '<div class="dm-card"><div class="dm-top"><div><div class="dm-mag">' + esc(r.mag) + '</div><div class="dm-who">' +
+      (r.dir.email ? '<a href="mailto:' + esc(r.dir.email) + '">' + esc(r.dir.label) + '</a>' : esc(r.dir.label)) + '</div></div>' + badge + '</div>' +
+      '<div class="dm-adj">' + (r.adj ? 'Adjoint : ' + (r.adj.email ? '<a href="mailto:' + esc(r.adj.email) + '">' + esc(r.adj.label) + '</a>' : esc(r.adj.label)) : 'Pas d\'adjoint') + '</div>' +
+      '<div class="dm-abs">' + (itemsHtml || '<div class="dm-none">Aucune absence en ' + EDEV_MOIS[m].toLowerCase() + '</div>') + '</div></div>';
     if (r.ens !== lastEns){ lastEns = r.ens; rowsHtml += '<tr class="sep"><td colspan="' + (nDays + 1) + '">' + (r.ens === 'GdO' ? 'Générale d\'Optique' : 'Edgard Opticiens') + '</td></tr>'; }
     rowsHtml += '<tr><td class="first"><div class="mag">' + esc(r.mag) + '</div><div class="who">' +
       (r.dir.email ? '<a href="mailto:' + esc(r.dir.email) + '">' + esc(r.dir.label) + '</a>' : esc(r.dir.label)) + '</div>' +
@@ -1976,7 +2037,9 @@ function renderDirs(){
   });
   if (!rowsHtml) rowsHtml = '<tr><td class="first" colspan="' + (nDays + 1) + '" style="padding:18px;color:#888">Aucune absence de directeur sur ce mois.</td></tr>';
 
+  if (!mobHtml) mobHtml = '<div class="dm-none" style="padding:14px 2px">Aucune absence de directeur sur ce mois.</div>';
   body.innerHTML = contact +
+    '<div class="dm-datebar"><label for="dirs-date">Qui contacter un autre jour :</label><input type="date" id="dirs-date" value="' + edevKey(selDay) + '" onchange="dirsPickDate(this.value)"></div>' +
     '<div class="ecal-bar"><button onclick="dirsShift(-1)">‹ Précédent</button><span class="lbl">' + EDEV_MOIS[m] + ' ' + y + '</span><button onclick="dirsShift(1)">Suivant ›</button><button onclick="dirsToday()">Aujourd\'hui</button></div>' +
     '<div class="dfilters">' +
       '<button class="pill' + (DIRS_ENS === 'all' ? ' on' : '') + '" onclick="dirsEns(\'all\')">Tous</button>' +
@@ -1990,9 +2053,10 @@ function renderDirs(){
       '<span class="li"><span class="sw" style="background:var(--blue)"></span>RTT</span>' +
       '<span class="li"><span class="sw" style="background:var(--orange)"></span>Absence validée</span>' +
       '<span class="li"><span class="sw" style="background:#FDEBD8;border:1.5px dashed var(--orange)"></span>Absence en attente</span>' +
-      '<span class="li">Cliquez sur un jour pour voir qui contacter ce jour-là</span>' +
+      '<span class="li dmob-hide">Cliquez sur un jour pour voir qui contacter ce jour-là</span>' +
     '</div>' +
-    '<div class="dgrid-wrap"><table class="dgrid"><thead><tr>' + head + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+    '<div class="dgrid-wrap"><table class="dgrid"><thead><tr>' + head + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+    '<div class="dmob">' + mobHtml + '</div>';
 }
 
 function previewHtml(lines){
