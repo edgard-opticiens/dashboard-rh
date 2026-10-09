@@ -138,20 +138,45 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .panel-toolbar select{margin-left:8px}
 .panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
 
-/* ===== Anniversaires / Petits nouveaux / Trombinoscope ===== */
-.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:6px 0 12px}
-.people-card{border-radius:10px;padding:14px 10px 12px;text-align:center;border:1.5px solid var(--bd);background:#FBFAF7}
-.people-card .ph{width:56px;height:56px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--gl);color:#fff;font-family:'Fraunces',serif;font-weight:700;font-size:16px}
-.people-card .ph img{width:100%;height:100%;object-fit:cover}
-.people-card .nm{font-size:12.5px;font-weight:700;color:var(--dk);line-height:1.25}
-.people-card .st{font-size:10.5px;color:var(--md);margin-top:2px;text-transform:uppercase;letter-spacing:.2px}
-.people-card .wh{font-size:10px;color:var(--md);margin-top:5px}
-.people-card .badge{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:6px;background:#EFE8D8;color:var(--dk)}
-.people-card.today{border-color:#E8C9ED;background:#FBF3FD}
-.people-card.today .badge{background:#F4D9F7;color:#6c3483}
-.trombino-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.trombino-bar select,.trombino-bar input{font-family:'Inter',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk)}
+/* ===== Anniversaires / Petits nouveaux / Trombinoscope — presentation portail (pas des cases) ===== */
+.ve-stack{display:flex;flex-direction:column;gap:18px}
+.ve-card{position:relative;overflow:hidden;border-radius:24px;background:linear-gradient(135deg, rgba(169,122,46,.11), rgba(214,96,47,.13));border:1.5px solid rgba(169,122,46,.3);padding:26px 30px;box-shadow:0 20px 40px -28px rgba(169,122,46,.35)}
+.ve-eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--g);margin:0 0 6px}
+.ve-title{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;letter-spacing:-.01em;margin:0 0 16px;color:var(--dk)}
+.ve-rows{display:flex;flex-direction:column;gap:12px}
+.ve-row{display:flex;align-items:center;gap:12px}
+.ve-row .ic{flex:none;width:44px;height:44px;border-radius:50%;background:rgba(169,122,46,.14);border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.ve-row .tx{font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;color:var(--dk)}
+.ve-row.today .tx{color:var(--spark)}
+.ve-avatars{display:flex;flex-wrap:wrap;gap:18px}
+.ve-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;width:104px;text-align:center}
+.ve-avatar .wrap{position:relative;width:64px;height:64px}
+.ve-avatar .ph,.ve-avatar .ini{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;color:var(--g);background:rgba(169,122,46,.14);box-sizing:border-box}
+.ve-avatar .ph{display:block;background:none}
+.ve-avatar .nm{font-size:.78rem;font-weight:700;color:var(--dk);line-height:1.3}
+.ve-avatar .soc{font-size:.66rem;font-weight:600;color:var(--md);margin-top:2px;text-transform:uppercase;letter-spacing:.04em}
+.ve-avatar .dt{font-size:.62rem;font-weight:500;color:var(--g);margin-top:3px}
+.ve-avatar .bdg{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.2px;color:#fff;background:var(--spark);padding:2px 8px;border-radius:20px;margin-top:3px}
+.ve-empty{font-family:'Inter',sans-serif;font-size:.85rem;color:var(--md)}
+.ve-trombino{position:relative;overflow:hidden;border-radius:24px;background:linear-gradient(120deg,var(--dk),#2E2419);padding:28px 30px;color:#fff}
+.ve-trombino .ve-eyebrow{color:var(--spark)}
+.ve-trombino .ve-title{color:#fff}
+.ve-trombino .sub{opacity:.82;font-size:.88rem;margin:0 0 18px;line-height:1.5;max-width:520px}
+.trombino-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.trombino-bar select,.trombino-bar input{font-family:'Inter',sans-serif;font-size:12.5px;padding:9px 13px;border:1.5px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(255,255,255,.08);color:#fff}
+.trombino-bar select option{color:var(--dk)}
+.trombino-bar input::placeholder{color:rgba(255,255,255,.55)}
 .trombino-bar input{flex:1;min-width:160px}
+.trombino-count{font-size:11px;color:rgba(255,255,255,.65);margin-bottom:16px}
+.ve-trombino .ve-avatar .nm,.ve-trombino .ve-avatar .soc{color:#fff}
+.ve-trombino .ve-avatar .soc{opacity:.7}
+.ve-trombino .ve-empty{color:rgba(255,255,255,.75)}
+@media(max-width:640px){
+  .ve-card,.ve-trombino{padding:20px 18px}
+  .ve-avatars{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px;justify-items:center}
+  .ve-avatar{width:100%}
+  .ve-avatar .wrap{width:74px;height:74px}
+}
 .trombino-count{font-size:11px;color:var(--md);margin-bottom:8px}
 
 /* Planning Edgard Developpement (calendrier mensuel) */
@@ -1170,49 +1195,57 @@ function initiales(prenom, nom){
   var r = (a + b).toUpperCase();
   return r || '?';
 }
-function peopleCard(o){
-  var ph;
-  if (o.photoUrl) ph = '<div class="ph"><img src="' + esc(o.photoUrl) + '" alt="" loading="lazy"></div>';
-  else if (o.photoBase64) ph = '<div class="ph"><img src="data:image/jpeg;base64,' + o.photoBase64 + '" alt="" loading="lazy"></div>';
-  else ph = '<div class="ph">' + esc(initiales(o.prenom, o.nom)) + '</div>';
-  return '<div class="people-card' + (o.today ? ' today' : '') + '">' + ph +
-    '<div class="nm">' + esc((o.prenom || '') + ' ' + (o.nom || '')) + '</div>' +
-    (o.ligne1 ? '<div class="st">' + esc(o.ligne1) + '</div>' : '') +
-    (o.ligne2 ? '<div class="wh">' + esc(o.ligne2) + '</div>' : '') +
-    (o.badge ? '<span class="badge">' + esc(o.badge) + '</span>' : '') +
-    '</div>';
+function veRow(icon, texte, today){
+  return '<div class="ve-row' + (today ? ' today' : '') + '"><div class="ic">' + icon + '</div><div class="tx">' + texte + '</div></div>';
+}
+function veAvatar(o){
+  var img;
+  if (o.photoUrl) img = '<img class="ph" src="' + esc(o.photoUrl) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div class="ini" style="display:none">' + esc(initiales(o.prenom, o.nom)) + '</div>';
+  else if (o.photoBase64) img = '<img class="ph" src="data:image/jpeg;base64,' + o.photoBase64 + '" alt="" loading="lazy">';
+  else img = '<div class="ini">' + esc(initiales(o.prenom, o.nom)) + '</div>';
+  return '<div class="ve-avatar"><div class="wrap">' + img + '</div>' +
+    '<div><div class="nm">' + esc(o.prenom || '') + '</div>' +
+    '<div class="nm" style="text-transform:uppercase">' + esc(o.nom || '') + '</div>' +
+    (o.soc ? '<div class="soc">' + esc(o.soc) + '</div>' : '') +
+    (o.dt ? '<div class="dt">' + esc(o.dt) + '</div>' : '') +
+    (o.bdg ? '<div class="bdg">' + esc(o.bdg) + '</div>' : '') +
+    '</div></div>';
 }
 
+/* Presentation identique a celle du portail RH (encarts Anniversaires / Petits nouveaux / Trombinoscope) */
+function formatAnniv(p){
+  var societe = (p.societe || '').toUpperCase();
+  var nom = (p.nom || '').toUpperCase();
+  return (societe ? societe + '-' : '') + nom + ' ' + (p.prenom || '') + ' (' + p.dateAffichage + ')';
+}
 function renderAnniversaires(){
   var aj = STATE.anniversaires.aujourdhui || [], bt = STATE.anniversaires.bientot || [];
   var total = aj.length + bt.length;
-  document.getElementById('anniv-count').textContent = total;
-  document.getElementById('anniv-preview').innerHTML = previewHtml(
-    aj.map(function(p){ return '🎉 ' + esc(p.prenom + ' ' + p.nom) + ' — aujourd\'hui'; })
-      .concat(bt.map(function(p){ return esc(p.prenom + ' ' + p.nom) + ' — ' + esc(p.dateAffichage); }))
-  );
-  var box = document.getElementById('sec-anniv').querySelector('.panel-body');
-  if (!total){ box.innerHTML = '<div class="empty">Aucun anniversaire dans les 7 prochains jours.</div>'; return; }
-  var cardsAj = aj.map(function(p){ return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: 'Aujourd\'hui', today: true }); }).join('');
-  var cardsBt = bt.slice().sort(function(a, b){ return a.joursRestants - b.joursRestants; })
-    .map(function(p){ return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: p.dateAffichage }); }).join('');
-  box.innerHTML = (cardsAj ? '<div class="panel-note">🎉 Aujourd\'hui</div><div class="people-grid">' + cardsAj + '</div>' : '') +
-    (cardsBt ? '<div class="panel-note" style="margin-top:14px">Dans les 7 prochains jours</div><div class="people-grid">' + cardsBt + '</div>' : '');
+  var titre = document.getElementById('anniv-title');
+  if (titre) titre.textContent = aj.length ? 'Joyeux anniversaire !' : 'Anniversaires à venir';
+  var box = document.getElementById('anniv-body');
+  if (!total){ box.innerHTML = '<div class="ve-empty">Aucun anniversaire dans les 7 prochains jours.</div>'; return; }
+  var rows = aj.map(function(p){ return veRow('🎂', esc(formatAnniv(p)), true); }).join('') +
+    bt.slice().sort(function(a, b){ return a.joursRestants - b.joursRestants; })
+      .map(function(p){ return veRow('🎂', esc(formatAnniv(p)), false); }).join('');
+  box.innerHTML = '<div class="ve-rows">' + rows + '</div>';
 }
 
+function fmtDateEntree(iso){
+  if (!iso) return '';
+  var p = String(iso).split('-');
+  if (p.length !== 3) return '';
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
 function renderNouveaux(){
   var liste = STATE.nouveaux || [];
-  document.getElementById('nouv-count').textContent = liste.length;
-  document.getElementById('nouv-preview').innerHTML = previewHtml(
-    liste.map(function(p){ return esc(p.prenom + ' ' + p.nom) + ' — ' + esc(p.societe); })
-  );
-  var box = document.getElementById('sec-nouveaux').querySelector('.panel-body');
-  if (!liste.length){ box.innerHTML = '<div class="empty">Aucune arrivée récente (30 derniers jours).</div>'; return; }
-  var cards = liste.slice().sort(function(a, b){ return a.joursDepuisEntree - b.joursDepuisEntree; }).map(function(p){
-    var ligne2 = p.joursDepuisEntree === 0 ? 'Arrivé(e) aujourd\'hui' : 'Arrivé(e) il y a ' + p.joursDepuisEntree + ' jour' + (p.joursDepuisEntree > 1 ? 's' : '');
-    return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: ligne2, photoUrl: p.photoUrl });
+  var box = document.getElementById('nouv-body');
+  if (!liste.length){ box.innerHTML = '<div class="ve-empty">Aucune arrivée récente (30 derniers jours).</div>'; return; }
+  var avatars = liste.slice().sort(function(a, b){ return a.joursDepuisEntree - b.joursDepuisEntree; }).map(function(p){
+    var dt = fmtDateEntree(p.dateEntreeIso);
+    return veAvatar({ prenom: p.prenom, nom: p.nom, photoUrl: p.photoUrl, soc: p.societe, dt: dt ? 'Entrée le ' + dt : '' });
   }).join('');
-  box.innerHTML = '<div class="people-grid">' + cards + '</div>';
+  box.innerHTML = '<div class="ve-avatars">' + avatars + '</div>';
 }
 
 function trombinoCharger(magasin){
@@ -1233,24 +1266,24 @@ function onTrombinoSearch(){
   renderTrombino(false);
 }
 function renderTrombino(recharger){
-  var box = document.getElementById('sec-trombino').querySelector('.panel-body');
+  var box = document.getElementById('trombino-body');
   var magasin = STATE.trombinoMagasin;
-  if (!magasin){ box.innerHTML = '<div class="empty">Choisissez un magasin pour afficher les photos.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
+  if (!magasin){ box.innerHTML = '<div class="ve-empty">Choisissez un magasin pour afficher les photos.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
   if (!recharger && STATE.trombinoCache[magasin]){ afficherTrombino(STATE.trombinoCache[magasin]); return; }
-  box.innerHTML = '<div class="empty">Chargement…</div>';
+  box.innerHTML = '<div class="ve-empty">Chargement…</div>';
   trombinoCharger(magasin).then(afficherTrombino);
   function afficherTrombino(emp){
-    if (emp === null){ box.innerHTML = '<div class="empty">Photos indisponibles pour ce magasin pour le moment.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
+    if (emp === null){ box.innerHTML = '<div class="ve-empty">Photos indisponibles pour ce magasin pour le moment.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
     var liste = emp.slice();
     var f = (STATE.trombinoFiltre || '').trim().toUpperCase();
     if (f) liste = liste.filter(function(p){ return ((p.prenom || '') + ' ' + (p.nom || '')).toUpperCase().indexOf(f) !== -1; });
     liste.sort(function(a, b){ return (a.nom || '').localeCompare(b.nom || ''); });
     document.getElementById('trombino-compte').textContent = liste.length + ' / ' + emp.length + ' collaborateur' + (emp.length > 1 ? 's' : '');
-    if (!liste.length){ box.innerHTML = '<div class="empty">Aucun résultat.</div>'; return; }
-    var cards = liste.map(function(p){
-      return peopleCard({ prenom: p.prenom, nom: p.nom, photoBase64: p.photoBase64, badge: p.managerId == null ? 'Responsable magasin' : null });
+    if (!liste.length){ box.innerHTML = '<div class="ve-empty">Aucun résultat.</div>'; return; }
+    var avatars = liste.map(function(p){
+      return veAvatar({ prenom: p.prenom, nom: p.nom, photoBase64: p.photoBase64, bdg: p.managerId == null ? 'Responsable magasin' : null });
     }).join('');
-    box.innerHTML = '<div class="people-grid">' + cards + '</div>';
+    box.innerHTML = '<div class="ve-avatars">' + avatars + '</div>';
   }
 }
 
@@ -1323,34 +1356,37 @@ function buildPanels(){
         '<div class="panel-body" id="stats-body"></div>' +
       '</div>' +
     '</div>';
-  P.anniv = '<div class="panel" id="sec-anniv" style="--pc:var(--purple)">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-anniv\')"><div><div class="n" id="anniv-count">0</div><div class="l">Anniversaires (7 jours)</div></div><div class="chev">▾</div></div>' +
-      '<div class="panel-preview" id="anniv-preview" onclick="togglePanel(\'sec-anniv\')"></div>' +
-      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+  /* Vie d'equipe : meme presentation que le portail RH (encarts pleine largeur, pas de "cases" a cliquer) */
+  P.anniv = '<div class="ve-card" id="sec-anniv">' +
+      '<p class="ve-eyebrow">🎉 Anniversaires</p>' +
+      '<h2 class="ve-title" id="anniv-title">Anniversaires à venir</h2>' +
+      '<div id="anniv-body"></div>' +
     '</div>';
-  P.nouveaux = '<div class="panel" id="sec-nouveaux" style="--pc:var(--green)">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-nouveaux\')"><div><div class="n" id="nouv-count">0</div><div class="l">Petits nouveaux (30 jours)</div></div><div class="chev">▾</div></div>' +
-      '<div class="panel-preview" id="nouv-preview" onclick="togglePanel(\'sec-nouveaux\')"></div>' +
-      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+  P.nouveaux = '<div class="ve-card" id="sec-nouveaux">' +
+      '<p class="ve-eyebrow">Ils viennent d\'arriver</p>' +
+      '<h2 class="ve-title">Les petits nouveaux</h2>' +
+      '<div id="nouv-body"></div>' +
     '</div>';
-  P.trombino = '<div class="panel" id="sec-trombino" style="--pc:var(--spark)">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-trombino\')"><div><div class="n">' + TROMBINO_MAGASINS.length + '</div><div class="l">Trombinoscope — par magasin</div></div><div class="chev">▾</div></div>' +
-      '<div class="panel-preview" onclick="togglePanel(\'sec-trombino\')"><div class="pv-item" style="color:#bbb">Cliquez pour choisir un magasin</div></div>' +
-      '<div class="panel-detail">' +
-        '<div class="trombino-bar"><select id="trombino-magasin" onchange="onTrombinoMagasinChange()"><option value="">— Choisir un magasin —</option>' +
-          TROMBINO_MAGASINS.map(function(m){ return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') +
-        '</select><input type="text" id="trombino-search" placeholder="Rechercher un nom..." oninput="onTrombinoSearch()"></div>' +
-        '<div class="trombino-count" id="trombino-compte"></div>' +
-        '<div class="panel-body"></div>' +
-      '</div>' +
+  P.trombino = '<div class="ve-card ve-trombino" id="sec-trombino">' +
+      '<p class="ve-eyebrow">Toute l\'équipe, un coup d\'œil</p>' +
+      '<h2 class="ve-title">Trombinoscope</h2>' +
+      '<p class="sub">Retrouvez les collaborateurs de tous les magasins du groupe.</p>' +
+      '<div class="trombino-bar"><select id="trombino-magasin" onchange="onTrombinoMagasinChange()"><option value="">— Choisir un magasin —</option>' +
+        TROMBINO_MAGASINS.map(function(m){ return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') +
+      '</select><input type="text" id="trombino-search" placeholder="Rechercher un nom..." oninput="onTrombinoSearch()"></div>' +
+      '<div class="trombino-count" id="trombino-compte"></div>' +
+      '<div id="trombino-body"></div>' +
     '</div>';
   function sec(num, title, desc, html){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="panel-grid">' + html + '</div></section>';
   }
+  function secLibre(num, title, desc, html){
+    return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="ve-stack">' + html + '</div></section>';
+  }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis.', P.cp + P.var + P.hsac + P.plannings) +
     sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats) +
-    sec('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
+    secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
 }
 
