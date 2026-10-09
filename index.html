@@ -450,7 +450,23 @@ function startApp(){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   loadAll();
-  setInterval(loadAll, 300000);
+  /* Rafraichissement auto : toutes les 60 min (au lieu de 5), et seulement si l'onglet est
+     affiche a l'ecran — sinon un onglet laisse ouvert en arriere-plan consommait des executions
+     n8n en continu toute la journee pour rien. Si l'onglet redevient visible apres une pause plus
+     longue que l'intervalle, on recharge immediatement pour avoir des donnees fraiches. */
+  var AUTOREFRESH_MS = 3600000;
+  var lastAutoLoad = Date.now();
+  setInterval(function(){
+    if (document.visibilityState !== 'visible') return;
+    loadAll();
+    lastAutoLoad = Date.now();
+  }, AUTOREFRESH_MS);
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible' && (Date.now() - lastAutoLoad) > AUTOREFRESH_MS){
+      loadAll();
+      lastAutoLoad = Date.now();
+    }
+  });
 }
 function tryGate(){
   var pin = document.getElementById('gatePin').value.trim();
@@ -1137,8 +1153,6 @@ function renderPlannings(){
 
 /* ============================ ANNIVERSAIRES / PETITS NOUVEAUX / TROMBINOSCOPE ============================ */
 var PORTAIL_BASE = 'https://edgard-opticiens.github.io/portail-rh-edgard/';
-var TROMBINO_URL = 'https://edgard-opticiens.app.n8n.cloud/webhook/trombinoscope';
-var TROMBINO_KEY = 'Edgard37*';
 var TROMBINO_MAGASINS = ['ANGO','BIARRO','BORDO','CAENPO','CHATO','CHEMILLO','CHOLO','DUNES','ECUME','EDGARD DEVELOPPEMENT','FORMIO','GIRO','HAVRO','JISAM','LYONO','MANSO','MARAIS','MARSEILLO','MUDO','NANCEO','NANTO','NICEO','NIORTO','ORLO','REIMO','STRABO','TURO'];
 
 function chargerAnniversaires(){
@@ -1204,8 +1218,7 @@ function renderNouveaux(){
 function trombinoCharger(magasin){
   if (!magasin) return Promise.resolve([]);
   if (STATE.trombinoCache[magasin]) return Promise.resolve(STATE.trombinoCache[magasin]);
-  return fetch(TROMBINO_URL + '?magasin=' + encodeURIComponent(magasin), { headers: { 'x-api-key': TROMBINO_KEY } })
-    .then(function(r){ if (!r.ok) throw new Error('http'); return r.json(); })
+  return authRead('trombinoscope', { magasin: magasin })
     .then(function(j){ var emp = (j && j.employees) || []; STATE.trombinoCache[magasin] = emp; return emp; })
     .catch(function(){ return null; });
 }
