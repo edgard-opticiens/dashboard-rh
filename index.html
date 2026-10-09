@@ -171,13 +171,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .ve-trombino .ve-avatar .nm,.ve-trombino .ve-avatar .soc{color:#fff}
 .ve-trombino .ve-avatar .soc{opacity:.7}
 .ve-trombino .ve-empty{color:rgba(255,255,255,.75)}
+.ve-group-label{font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.6);margin:18px 0 10px}
+.ve-group-label:first-child{margin-top:0}
 @media(max-width:640px){
   .ve-card,.ve-trombino{padding:20px 18px}
   .ve-avatars{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px;justify-items:center}
   .ve-avatar{width:100%}
   .ve-avatar .wrap{width:74px;height:74px}
 }
-.trombino-count{font-size:11px;color:var(--md);margin-bottom:8px}
 
 /* Planning Edgard Developpement (calendrier mensuel) */
 .ecal-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -1274,16 +1275,32 @@ function renderTrombino(recharger){
   trombinoCharger(magasin).then(afficherTrombino);
   function afficherTrombino(emp){
     if (emp === null){ box.innerHTML = '<div class="ve-empty">Photos indisponibles pour ce magasin pour le moment.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
-    var liste = emp.slice();
+    /* Hierarchie deduite de managerId : responsable (managerId null) en haut, puis les
+       "adjoints" (ceux qui ont eux-memes des gens sous eux) et enfin les collaborateurs
+       (tous les autres, qu'ils rapportent au responsable ou a un adjoint). */
+    var parents = {};
+    emp.forEach(function(p){ if (p.managerId != null) parents[p.managerId] = true; });
+    var responsable = emp.filter(function(p){ return p.managerId == null; });
+    var adjoints = emp.filter(function(p){ return p.managerId != null && parents[p.id]; });
+    var collaborateurs = emp.filter(function(p){ return p.managerId != null && !parents[p.id]; });
     var f = (STATE.trombinoFiltre || '').trim().toUpperCase();
-    if (f) liste = liste.filter(function(p){ return ((p.prenom || '') + ' ' + (p.nom || '')).toUpperCase().indexOf(f) !== -1; });
-    liste.sort(function(a, b){ return (a.nom || '').localeCompare(b.nom || ''); });
-    document.getElementById('trombino-compte').textContent = liste.length + ' / ' + emp.length + ' collaborateur' + (emp.length > 1 ? 's' : '');
-    if (!liste.length){ box.innerHTML = '<div class="ve-empty">Aucun résultat.</div>'; return; }
-    var avatars = liste.map(function(p){
-      return veAvatar({ prenom: p.prenom, nom: p.nom, photoBase64: p.photoBase64, bdg: p.managerId == null ? 'Responsable magasin' : null });
-    }).join('');
-    box.innerHTML = '<div class="ve-avatars">' + avatars + '</div>';
+    function matches(p){ return !f || ((p.prenom || '') + ' ' + (p.nom || '')).toUpperCase().indexOf(f) !== -1; }
+    function tri(a, b){ return (a.ordre || 0) - (b.ordre || 0) || (a.nom || '').localeCompare(b.nom || ''); }
+    responsable = responsable.filter(matches).sort(tri);
+    adjoints = adjoints.filter(matches).sort(tri);
+    collaborateurs = collaborateurs.filter(matches).sort(tri);
+    var total = responsable.length + adjoints.length + collaborateurs.length;
+    document.getElementById('trombino-compte').textContent = total + ' / ' + emp.length + ' collaborateur' + (emp.length > 1 ? 's' : '');
+    if (!total){ box.innerHTML = '<div class="ve-empty">Aucun résultat.</div>'; return; }
+    function groupe(label, liste){
+      if (!liste.length) return '';
+      return '<div class="ve-group-label">' + label + '</div><div class="ve-avatars">' +
+        liste.map(function(p){ return veAvatar({ prenom: p.prenom, nom: p.nom, photoBase64: p.photoBase64 }); }).join('') +
+        '</div>';
+    }
+    box.innerHTML = groupe('Responsable', responsable) +
+      groupe(adjoints.length > 1 ? 'Adjoints' : 'Adjoint', adjoints) +
+      groupe('Collaborateurs', collaborateurs);
   }
 }
 
