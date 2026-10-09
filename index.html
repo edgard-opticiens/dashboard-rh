@@ -70,7 +70,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .panel-toolbar{display:flex;justify-content:flex-end;margin-bottom:6px}
 .panel-toolbar select{font-family:'Inter',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
 .tag{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:3px 8px;border-radius:5px;flex:0 0 auto;white-space:nowrap}
-.tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp,.tag.directeur,.tag.deruy{background:#FDEBD8;color:#a3560f}
+.tag.en_attente,.tag.incomplet,.tag.reseau,.tag.dir,.tag.rh1,.tag.resp{background:#FDEBD8;color:#a3560f}
 .tag.non_envoye{background:#FADBD8;color:#943126}
 .tag.complet{background:#D5F5E3;color:#1e7a45}
 .empty{color:var(--md);font-size:12.5px;padding:14px 0;text-align:center}
@@ -137,6 +137,22 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .var-card .portal .pin b{font-family:'Fraunces',serif;letter-spacing:.15em;color:var(--dk);font-size:12px}
 .panel-toolbar select{margin-left:8px}
 .panel-toolbar .tb-label{font-size:11px;color:var(--md);align-self:center}
+
+/* ===== Anniversaires / Petits nouveaux / Trombinoscope ===== */
+.people-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:6px 0 12px}
+.people-card{border-radius:10px;padding:14px 10px 12px;text-align:center;border:1.5px solid var(--bd);background:#FBFAF7}
+.people-card .ph{width:56px;height:56px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--gl);color:#fff;font-family:'Fraunces',serif;font-weight:700;font-size:16px}
+.people-card .ph img{width:100%;height:100%;object-fit:cover}
+.people-card .nm{font-size:12.5px;font-weight:700;color:var(--dk);line-height:1.25}
+.people-card .st{font-size:10.5px;color:var(--md);margin-top:2px;text-transform:uppercase;letter-spacing:.2px}
+.people-card .wh{font-size:10px;color:var(--md);margin-top:5px}
+.people-card .badge{display:inline-block;font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:6px;background:#EFE8D8;color:var(--dk)}
+.people-card.today{border-color:#E8C9ED;background:#FBF3FD}
+.people-card.today .badge{background:#F4D9F7;color:#6c3483}
+.trombino-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.trombino-bar select,.trombino-bar input{font-family:'Inter',sans-serif;font-size:12.5px;padding:7px 12px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk)}
+.trombino-bar input{flex:1;min-width:160px}
+.trombino-count{font-size:11px;color:var(--md);margin-bottom:8px}
 
 /* Planning Edgard Developpement (calendrier mensuel) */
 .ecal-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -273,37 +289,6 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .item-card button.delete:disabled{opacity:.55;cursor:default;background:#fff;color:var(--red)}
 .item-card a.consult{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none}
 .item-card a.consult:hover{background:var(--purple);color:#fff}
-.item-card button.detail{display:inline-block;font-size:9.5px;padding:4px 10px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
-.item-card button.detail:hover,.item-card button.detail.open{background:var(--purple);color:#fff}
-.ndf-detail{overflow-x:auto;word-break:break-word;display:none;margin-top:6px;padding:10px 12px;background:#fff;border:1px solid var(--bd);border-radius:8px;font-size:11.5px;line-height:1.45;color:var(--dk,#1A1A1A)}
-.ndf-detail.open{display:block}
-.ndf-detail table{table-layout:auto;width:100%;border-collapse:collapse;margin:4px 0 8px}
-.ndf-detail th{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--md);text-align:left;padding:3px 6px 3px 0;border-bottom:1px solid var(--bd)}
-.ndf-detail td{min-width:0;padding:4px 6px 4px 0;border-bottom:1px solid #f0ece0;vertical-align:top}
-.ndf-detail td.num,.ndf-detail th.num{text-align:right;white-space:nowrap}
-.ndf-detail .sub{font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--md);margin:6px 0 2px}
-.ndf-detail a{color:#A97A2E;word-break:break-all}
-.ndf-sig{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-right:4px;background:#eee;color:#777}
-.ndf-sig.ok{background:#DDF3E4;color:#1d7a3f}
-.ndf-histo button.detail,.ndf-histo-box button.detail{display:inline-block;font-size:10px;padding:5px 12px;border-radius:14px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
-.ndf-histo button.detail:hover,.ndf-histo button.detail.open,.ndf-histo-box button.detail:hover{background:var(--purple);color:#fff}
-.ndf-histo{margin-top:18px;padding-top:14px;border-top:1px dashed var(--bd)}
-.ndf-histo-box{display:none;margin-top:10px}
-.ndf-histo-box.open{display:block}
-.ndf-histo-box input.hs{width:100%;max-width:340px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12px;margin-bottom:8px}
-.ndf-histo-box table{width:100%;border-collapse:collapse;font-size:12px}
-.ndf-histo-box th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--md);text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--bd)}
-.ndf-histo-box td{padding:7px 8px 7px 0;border-bottom:1px solid #f0ece0;vertical-align:middle}
-.ndf-histo-box td.num,.ndf-histo-box th.num{text-align:right;white-space:nowrap}
-.ndf-histo-wrap{overflow-x:auto}
-.ndf-modal{position:fixed;inset:0;background:rgba(20,20,20,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}
-.ndf-modal-in{background:#fff;border-radius:12px;max-width:840px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
-.ndf-modal-bar{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #e5e0d3;position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0}
-.ndf-modal-bar button{font-size:12px;padding:6px 12px;border-radius:16px;border:1px solid var(--purple);background:#fff;color:var(--purple);cursor:pointer;font-family:'Inter',sans-serif}
-.ndf-modal-bar button:hover{background:var(--purple);color:#fff}
-.ndf-modal-body{padding:6px 10px 16px}
-.ndf-modal-just{padding:0 18px 18px;font-size:12px}
-.ndf-modal-just a{color:#A97A2E;word-break:break-all}
 
 .panel-toolbar input[type=number],.panel-toolbar input[type=text]{font-family:'Inter',sans-serif;font-size:12.5px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);width:90px}
 .panel-toolbar input[type=text]{width:160px}
@@ -347,49 +332,6 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .st-zero{font-size:12px;color:var(--md);margin-top:10px;line-height:1.5}
 @media(max-width:760px){.st-kpis{grid-template-columns:1fr}.st-grid{grid-template-columns:1fr}.st-hbar{grid-template-columns:minmax(80px,45%) 1fr auto}}
 #sec-stats .panel-toolbar{flex-wrap:wrap;gap:6px 0;justify-content:flex-end}
-
-/* ===== Directeurs absents : vue mobile (cartes) ===== */
-.dmob,.dm-datebar{display:none}
-.dm-ens{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--md);margin:14px 2px 8px}
-.dm-card{border:1px solid var(--bd);border-radius:12px;background:#fff;padding:12px 14px;margin-bottom:10px}
-.dm-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.dm-mag{font-weight:700;font-size:15px;color:var(--dk);line-height:1.2}
-.dm-who{font-size:13px;color:#555;margin-top:2px}
-.dm-who a{color:inherit;text-decoration:none;border-bottom:1px dotted #aaa}
-.dm-badge{flex:0 0 auto;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:#FDEBD8;color:#a3560f;white-space:nowrap}
-.dm-adj{font-size:12px;color:#8a8a8a;margin-top:6px}
-.dm-adj a{color:inherit;text-decoration:none;border-bottom:1px dotted #bbb}
-.dm-abs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
-.dm-it{display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:4px solid #ccc;background:#f7f5f0;border-radius:6px;padding:7px 10px}
-.dm-it .d{font-weight:700;font-size:13px;color:var(--dk)}
-.dm-it .t{display:block;font-size:11.5px;color:#666;margin-top:1px}
-.dm-it.cp-valide{border-left-color:var(--green);background:#E3F5E9}
-.dm-it.cp-attente{border-left:4px dashed var(--green);background:#F3FBF6}
-.dm-it.rtt-valide{border-left-color:var(--blue);background:#DCEAF5}
-.dm-it.rtt-attente{border-left:4px dashed var(--blue);background:#EEF5FA}
-.dm-it.abs-valide{border-left-color:var(--orange);background:#FDEBD8}
-.dm-it.abs-attente{border-left:4px dashed var(--orange);background:#FEF5EC}
-.dm-pick{flex:0 0 auto;font-family:'Inter',sans-serif;font-size:11.5px;padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);cursor:pointer}
-.dm-none{font-size:12px;color:#aaa}
-.dm-datebar label{font-size:12px;color:var(--md)}
-.dm-datebar input[type=date]{font-family:'Inter',sans-serif;font-size:16px;padding:7px 10px;border:1.5px solid var(--bd);border-radius:8px;background:#fff;color:var(--dk);min-width:0}
-@media(max-width:640px){
-  #sec-dirs.expanded .panel-detail{padding:14px 12px 18px}
-  #sec-dirs .dgrid-wrap{display:none}
-  #sec-dirs .dmob{display:block}
-  #sec-dirs .dm-datebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
-  #sec-dirs .dmob-hide{display:none}
-  #sec-dirs .ecal-bar{gap:8px}
-  #sec-dirs .ecal-bar .lbl{order:-1;flex:1 0 100%;min-width:0}
-  #sec-dirs .ecal-bar button{flex:1 1 0;padding:10px 6px;font-size:13px}
-  #sec-dirs .dfilters button.pill{padding:9px 14px;font-size:12.5px}
-  #sec-dirs .dcontact{padding:12px}
-  #sec-dirs .dcontact .row{flex-direction:column;align-items:flex-start;gap:3px;padding:10px 0}
-  #sec-dirs .dcontact .mag{min-width:0;font-size:14px}
-  #sec-dirs .dcontact .to{flex:1 1 auto}
-  #sec-dirs .dcontact .to a{display:inline-block;padding:5px 0}
-  #sec-dirs .ecal-legend{justify-content:flex-start;gap:6px 14px}
-}
 </style>
 </head>
 <body>
@@ -485,7 +427,6 @@ var N8N_VARIABLES = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-variable
 var N8N_VAR_FINALIZE = 'https://edgard-opticiens.app.n8n.cloud/webhook/finaliser-variable-paie';
 var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-relance-manuelle';
 var N8N_CP_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
-var N8N_NDF_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/ndf-relance-manuelle';
 var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-supprimer-manuelle';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
@@ -600,7 +541,6 @@ function fmtDateISO(iso){
 }
 
 var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
-var NDF_ETAPE_LABEL = { directeur: 'Attente signature Directeur', reseau: 'Attente signature Directeur Réseau', deruy: 'Attente signature Julien Deruy' };
 var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
 var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
@@ -622,7 +562,8 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], ndf: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {} };
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
+  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '' };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -975,195 +916,6 @@ function supprimerCP(id){
     });
 }
 
-
-/* ===== Notes de frais : détail + relance ===== */
-function safeUrl(u){ u = String(u||''); return /^https:\/\//i.test(u) ? u.replace(/"/g,'%22').replace(/</g,'%3C') : ''; }
-function fmtEur(v){ return (Number(v)||0).toFixed(2).replace('.', ',') + ' €'; }
-function ndfTypeLabel(t){
-  var m = { ik:'Indemnités km', repas:'Repas', deplacements:'Déplacements', divers:'Divers', hebergement:'Hébergement' };
-  return m[String(t||'').toLowerCase()] || (t || '—');
-}
-function ndfDetailHtml(id){
-  var n = (STATE.ndf || []).filter(function(x){ return x.id === id; })[0];
-  if (!n) return '<em>Détail indisponible.</em>';
-  var h = '<div class="sub">Période</div><div>' + esc((n.mois || '—') + ' ' + (n.annee || '')) + (n.cv ? ' — ' + esc(n.cv) + ' CV' : '') + (n.ts ? ' — saisie le ' + esc(n.ts) : '') + '</div>';
-  h += '<div class="sub">Lignes de frais</div>';
-  if (n.lignes && n.lignes.length){
-    h += '<table><tr><th>Type</th><th>Date</th><th>Motif</th><th class="num">Km</th><th class="num">TTC</th></tr>';
-    n.lignes.forEach(function(l){
-      h += '<tr><td>' + esc(ndfTypeLabel(l.type)) + '</td><td>' + esc(l.date || '') + '</td><td>' + esc(l.motif || '') + '</td><td class="num">' + (l.km ? esc(l.km) : '') + '</td><td class="num">' + fmtEur(l.ttc) + '</td></tr>';
-    });
-    h += '<tr><td colspan="4"><strong>Total</strong></td><td class="num"><strong>' + fmtEur(n.montant) + '</strong></td></tr></table>';
-  } else { h += '<div>Aucune ligne.</div>'; }
-  h += '<div class="sub">Justificatifs</div>';
-  if (n.justificatifs && n.justificatifs.length){
-    h += n.justificatifs.map(function(j){
-      var u = safeUrl(j.webUrl);
-      return '<div>' + (u ? '📎 <a href="' + u + '" target="_blank" rel="noopener">' + esc(j.nomFichier || 'Justificatif') + '</a>' : '⚠️ ' + esc(j.nomFichier || 'Justificatif') + ' (fichier indisponible)') + '</div>';
-    }).join('');
-  } else { h += '<div>Aucun justificatif.</div>'; }
-  var sg = n.signatures || {};
-  h += '<div class="sub">Signatures</div><div>' +
-    '<span class="ndf-sig' + (sg.collaborateur ? ' ok' : '') + '">Collaborateur' + (sg.collaborateur ? ' ✔' : '') + '</span>' +
-    '<span class="ndf-sig' + (sg.directeur ? ' ok' : '') + '">Directeur' + (sg.directeur ? ' ✔' : '') + '</span>' +
-    (n.etape === 'reseau' || sg.reseau ? '<span class="ndf-sig' + (sg.reseau ? ' ok' : '') + '">Dir. réseau' + (sg.reseau ? ' ✔' : '') + '</span>' : '') +
-    '<span class="ndf-sig">Julien Deruy</span></div>';
-  h += '<div class="sub">En attente de</div><div><strong>' + esc(n.en_attente_nom || n.etape) + '</strong></div>';
-  return h;
-}
-function ndfToggleDetail(id){
-  var did = domId(id);
-  var box = document.getElementById('detail-ndf-' + did);
-  var btn = document.getElementById('detail-ndf-btn-' + did);
-  if (!box) return;
-  var open = box.classList.toggle('open');
-  if (btn){ btn.classList.toggle('open', open); btn.textContent = open ? '🙈 Masquer le détail' : '👁️ Voir le détail'; }
-}
-function relancerNDF(id){
-  var n = (STATE.ndf || []).filter(function(x){ return x.id === id; })[0];
-  if (!n){ alert("Note de frais introuvable — actualisez le tableau et réessayez."); return; }
-  if (!confirm('Envoyer un e-mail de rappel à ' + (n.en_attente_nom || 'la personne en attente') + ' pour la note de frais de ' + (n.prenom||'') + ' ' + (n.nom||'') + ' (' + fmtEur(n.montant) + ') ?')) return;
-  var btn = document.getElementById('relance-ndf-' + domId(id));
-  var reset = function(){ if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; } };
-  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
-  authFetch(N8N_NDF_RELANCE, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ id: n.id })
-  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
-    .then(function(res){
-      if (res.ok && res.data && res.data.ok){
-        if (btn){ btn.textContent = '✔️ Envoyé'; }
-        setTimeout(reset, 4000);
-      } else {
-        alert((res.data && res.data.error) || "Erreur lors de l'envoi de la relance — réessayez (votre session a peut-être expiré).");
-        reset();
-      }
-    })
-    .catch(function(){ alert("Erreur lors de l'envoi de la relance — réessayez."); reset(); });
-}
-
-
-/* ===== Notes de frais : historique des notes signées + visualisation ===== */
-var NDF_HISTO_OPEN = false, NDF_HISTO = null, NDF_HISTO_FILTER = '';
-var NDF_BAREME = {3:0.329,4:0.406,5:0.436,6:0.465,7:0.497,8:0.497,9:0.497};
-function ndfTaux(cv){ var c = Math.round(+cv) || 3; if (c < 3) c = 3; if (c > 9) c = 9; return NDF_BAREME[c]; }
-function ndfDateFr(iso){ var d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}); }
-function ndfHistoHtml(){
-  if (NDF_HISTO === 'chargement') return '<div class="empty">Chargement…</div>';
-  if (NDF_HISTO === 'erreur') return '<div class="empty">Impossible de charger l\'historique — réessayez.</div>';
-  if (!NDF_HISTO) return '';
-  var f = NDF_HISTO_FILTER.toLowerCase();
-  var list = NDF_HISTO.filter(function(r){
-    if (!f) return true;
-    return ((r.prenom||'') + ' ' + (r.nom||'') + ' ' + (r.societe||'') + ' ' + (r.mois||'') + ' ' + (r.annee||'')).toLowerCase().indexOf(f) !== -1;
-  });
-  var h = '<input class="hs" id="ndf-histo-search" type="text" placeholder="Rechercher (nom, société, mois…)" value="' + esc(NDF_HISTO_FILTER).replace(/"/g,'&quot;') + '" oninput="ndfHistoFilter(this.value)">';
-  h += '<div style="font-size:11px;color:var(--md);margin-bottom:6px">' + list.length + ' note(s) signée(s)</div>';
-  if (!list.length) return h + '<div class="empty">Aucune note de frais signée.</div>';
-  h += '<div class="ndf-histo-wrap"><table><tr><th>Signée le</th><th>Collaborateur</th><th>Société</th><th>Période</th><th class="num">Montant</th><th class="num">PJ</th><th></th></tr>';
-  list.forEach(function(r){
-    h += '<tr><td>' + esc(ndfDateFr(r.date_maj)) + '</td><td><strong>' + esc((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()) + '</strong></td><td>' + esc(r.societe) + '</td><td>' + esc((r.mois||'') + ' ' + (r.annee||'')) + '</td><td class="num">' + fmtEur(r.montant) + '</td><td class="num">' + (r.nb_justificatifs || 0) + '</td>' +
-      '<td><button type="button" class="detail" id="ndf-fiche-' + domId(r.id) + '" onclick="ndfOuvrirFiche(\'' + attrSafe(r.id) + '\')">👁️ Voir la note</button></td></tr>';
-  });
-  return h + '</table></div>';
-}
-function ndfHistoRefresh(){
-  var box = document.getElementById('ndf-histo-box');
-  if (box) box.innerHTML = ndfHistoHtml();
-}
-function ndfHistoFilter(v){
-  NDF_HISTO_FILTER = v || '';
-  var box = document.getElementById('ndf-histo-box');
-  if (!box) return;
-  var pos = (document.getElementById('ndf-histo-search') || {}).selectionStart;
-  box.innerHTML = ndfHistoHtml();
-  var inp = document.getElementById('ndf-histo-search');
-  if (inp){ inp.focus(); try{ inp.setSelectionRange(pos, pos); }catch(e){} }
-}
-function ndfToggleHisto(){
-  NDF_HISTO_OPEN = !NDF_HISTO_OPEN;
-  var box = document.getElementById('ndf-histo-box'), btn = document.getElementById('ndf-histo-btn');
-  if (box) box.classList.toggle('open', NDF_HISTO_OPEN);
-  if (btn){ btn.classList.toggle('open', NDF_HISTO_OPEN); btn.textContent = NDF_HISTO_OPEN ? '🙈 Masquer l\'historique des notes de frais signées' : '📚 Historique des notes de frais signées'; }
-  if (NDF_HISTO_OPEN && (!NDF_HISTO || NDF_HISTO === 'erreur')){
-    NDF_HISTO = 'chargement'; ndfHistoRefresh();
-    authRead('ndf_histo').then(function(res){ NDF_HISTO = (res && res.data) || []; ndfHistoRefresh(); })
-      .catch(function(){ NDF_HISTO = 'erreur'; ndfHistoRefresh(); });
-  } else { ndfHistoRefresh(); }
-}
-function ndfSigSvg(strokes){
-  if (!strokes || !strokes.length) return '<div style="height:58px;display:flex;align-items:center;justify-content:center;color:#bbb;font-style:italic;font-size:11px">Non signé</div>';
-  var paths = '';
-  strokes.forEach(function(st){
-    if (!st || st.length < 1) return;
-    var d = 'M ' + st[0][0] + ' ' + st[0][1];
-    for (var i = 1; i < st.length; i++) d += ' L ' + st[i][0] + ' ' + st[i][1];
-    paths += '<path d="' + d + '" fill="none" stroke="#0b3d62" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
-  });
-  return '<svg viewBox="0 0 600 155" preserveAspectRatio="xMidYMid meet" style="height:58px;width:100%;background:#fff">' + paths + '</svg>';
-}
-function ndfDocHtml(p){
-  var t = ndfTaux(p.cv || 3), byType = {}, totTVA = 0, totTTC = 0, rowsTbl = '';
-  var td = 'border:1px solid #d8dee6;padding:6px 8px;vertical-align:top;';
-  (p.lignes || []).forEach(function(l){
-    var ttc = Number(l.ttc) || 0;
-    if (l.type !== 'ik' && l.type !== 'hotelTrain') totTVA += Number(l.tva) || 0;
-    byType[l.type] = (byType[l.type] || 0) + ttc; totTTC += ttc;
-    var htC, tvaC;
-    if (l.type === 'ik'){ htC = (Number(l.km)||0) + ' km × ' + String(t).replace('.', ',') + ' €'; tvaC = '—'; }
-    else if (l.type === 'hotelTrain'){ htC = '— (TTC)'; tvaC = 'non récup.'; }
-    else { htC = fmtEur(l.ht); tvaC = fmtEur(l.tva); }
-    var dt = l.date ? String(l.date).split('-').reverse().join('/') : '';
-    rowsTbl += '<tr><td style="' + td + '">' + esc(dt) + '</td><td style="' + td + '">' + esc(ndfTypeLabel(l.type)) + '</td><td style="' + td + 'word-break:break-word">' + esc(l.motif || '') + '</td>' +
-      '<td style="' + td + 'text-align:right;white-space:nowrap">' + htC + '</td><td style="' + td + 'text-align:right;white-space:nowrap">' + tvaC + '</td><td style="' + td + 'text-align:right;white-space:nowrap">' + fmtEur(ttc) + '</td></tr>';
-  });
-  var th = 'border:1px solid #d8dee6;background:#eef2f6;color:#0b3d62;padding:6px 8px;font-size:11px;';
-  var recap = '<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;color:#ffe9a8"><span>Total TVA (récupérable)</span><span>' + fmtEur(totTVA) + '</span></div>' +
-    '<div style="display:flex;justify-content:space-between;padding:8px 0 0;margin-top:6px;border-top:2px solid rgba(255,255,255,.4);font-size:17px;font-weight:800"><span>TOTAL GÉNÉRAL TTC</span><span>' + fmtEur(totTTC) + '</span></div>';
-  var sigBlocks = [['sigC','Collaborateur'],['sigD','Directeur'],['sigR','Directeur réseau'],['sigJ','Julien DERUY']];
-  var nbSig = 0, sigsHTML = '';
-  sigBlocks.forEach(function(sb){
-    if (!p[sb[0]]) return; nbSig++;
-    sigsHTML += '<div style="border:1px solid #d8dee6;border-radius:8px;padding:8px;text-align:center"><div style="font-size:11px;color:#5b6470;font-weight:600;margin-bottom:4px">' + sb[1] + '</div>' + ndfSigSvg(p[sb[0]]) + '<div style="font-size:10px;color:#9aa3ae">' + esc(p.ts || '') + '</div></div>';
-  });
-  return '<div style="padding:18px;font-family:-apple-system,Segoe UI,Arial,sans-serif;color:#1c2530;font-size:12px;background:#fff">' +
-    '<div style="border-bottom:2px solid #0b3d62;padding-bottom:8px;margin-bottom:12px"><div style="font-size:18px;font-weight:800;color:#0b3d62">NOTE DE FRAIS</div><div style="font-size:12px;color:#5b6470">Edgard Opticiens · Générale d\'Optique</div></div>' +
-    '<div style="margin-bottom:12px;font-size:13px;line-height:1.7"><div><b>Société :</b> ' + esc(p.soc || '') + '</div><div><b>Nom et prénom :</b> ' + esc(p.nom || '') + ' ' + esc(p.prenom || '') + '</div><div><b>Mois et année :</b> ' + esc(p.mois || '') + ' ' + esc(p.annee || '') + '</div></div>' +
-    '<table style="width:100%;border-collapse:collapse"><tr><th style="' + th + 'text-align:left">Date</th><th style="' + th + 'text-align:left">Type</th><th style="' + th + 'text-align:left">Motif</th><th style="' + th + 'text-align:right">HT</th><th style="' + th + 'text-align:right">TVA</th><th style="' + th + 'text-align:right">TTC</th></tr>' + rowsTbl + '</table>' +
-    '<div style="margin-top:12px;background:#0b3d62;color:#fff;border-radius:10px;padding:12px;font-size:13px">' + recap + '</div>' +
-    (nbSig ? '<div style="display:grid;grid-template-columns:repeat(' + nbSig + ',1fr);gap:10px;margin-top:14px">' + sigsHTML + '</div>' : '') +
-  '</div>';
-}
-function ndfFermerFiche(){ var m = document.getElementById('ndf-modal'); if (m) m.remove(); }
-function ndfImprimerFiche(){
-  var c = document.getElementById('ndf-modal-print'); if (!c) return;
-  var w = window.open('', '_blank'); if (!w){ alert("Autorisez l'ouverture de fenêtres pour imprimer."); return; }
-  w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Note de frais</title></head><body style="margin:0">' + c.innerHTML + '</body></html>');
-  w.document.close(); w.focus(); setTimeout(function(){ w.print(); }, 400);
-}
-function ndfOuvrirFiche(id){
-  var btn = document.getElementById('ndf-fiche-' + domId(id));
-  if (btn){ btn.disabled = true; btn.textContent = 'Ouverture…'; }
-  var reset = function(){ if (btn){ btn.disabled = false; btn.textContent = '👁️ Voir la note'; } };
-  authRead('ndf_fiche', {id: id}).then(function(res){
-    reset();
-    var f = res && res.data;
-    if (!f || !f.payload){ alert('Note introuvable.'); return; }
-    var p = f.payload, just = Array.isArray(p.justificatifs) ? p.justificatifs : [];
-    var jh = just.length ? just.map(function(j){
-      var u = safeUrl(j.webUrl);
-      return '<div>' + (u ? '📎 <a href="' + u + '" target="_blank" rel="noopener">' + esc(j.nomFichier || 'Justificatif') + '</a>' : '⚠️ ' + esc(j.nomFichier || 'Justificatif') + ' (fichier indisponible)') + '</div>';
-    }).join('') : '<div>Aucun justificatif joint.</div>';
-    ndfFermerFiche();
-    var m = document.createElement('div'); m.id = 'ndf-modal'; m.className = 'ndf-modal';
-    m.onclick = function(e){ if (e.target === m) ndfFermerFiche(); };
-    m.innerHTML = '<div class="ndf-modal-in"><div class="ndf-modal-bar"><strong>Note de frais — ' + esc(((p.prenom||'') + ' ' + (p.nom||'')).trim()) + '</strong><span><button type="button" onclick="ndfImprimerFiche()">🖨️ Imprimer / PDF</button> <button type="button" onclick="ndfFermerFiche()">✕ Fermer</button></span></div>' +
-      '<div class="ndf-modal-body" id="ndf-modal-print">' + ndfDocHtml(p) + '</div>' +
-      '<div class="ndf-modal-just"><strong>Justificatifs</strong>' + jh + '<div style="margin-top:8px;color:#999">Dernière signature : ' + esc(ndfDateFr(f.date_maj)) + '</div></div></div>';
-    document.body.appendChild(m);
-  }).catch(function(){ reset(); alert("Impossible d'ouvrir la note — réessayez."); });
-}
-
 function renderHsAc(){
   var hs = STATE.hs.map(function(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
@@ -1173,27 +925,12 @@ function renderHsAc(){
     return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape,
       label: AC_ETAPE_LABEL[r.etape] || r.etape, type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), maj: r.date_maj };
   });
-  var nd = (STATE.ndf || []).map(function(r){
-    var ttc = Number(r.montant) || 0;
-    return { ndfId: r.id, who: esc(((r.prenom||'') + ' ' + (r.nom||'').toUpperCase()).trim() || 'Note de frais'), soc: esc(r.societe), tag: r.etape,
-      label: r.en_attente_nom ? ('Attente signature ' + r.en_attente_nom) : (NDF_ETAPE_LABEL[r.etape] || r.etape),
-      type: 'Note de frais' + (ttc ? ' (' + ttc.toFixed(2).replace('.', ',') + ' €)' : ''), maj: r.date_maj };
-  });
-  var all = hs.concat(ac).concat(nd);
+  var all = hs.concat(ac);
   var body = all.length ? '<div class="item-grid">' + all.map(function(r){
-    var extra = '';
-    if (r.ndfId){
-      var did = domId(r.ndfId);
-      extra = '<div class="btnrow">' +
-        '<button type="button" class="detail" id="detail-ndf-btn-' + did + '" onclick="ndfToggleDetail(\'' + attrSafe(r.ndfId) + '\')">👁️ Voir le détail</button>' +
-        '<button type="button" class="relance" id="relance-ndf-' + did + '" onclick="relancerNDF(\'' + attrSafe(r.ndfId) + '\')">✉️ Relancer</button></div>' +
-        '<div class="ndf-detail" id="detail-ndf-' + did + '">' + ndfDetailHtml(r.ndfId) + '</div>';
-    }
     return '<div class="item-card ' + r.tag + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
-      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' + extra +
+      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
       '<div class="since">' + joursDepuis(r.maj) + '</div></div>';
-  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup, d\'acompte ou de note de frais en attente.</div>';
-  body += '<div class="ndf-histo"><button type="button" class="detail' + (NDF_HISTO_OPEN ? ' open' : '') + '" id="ndf-histo-btn" onclick="ndfToggleHisto()">' + (NDF_HISTO_OPEN ? '🙈 Masquer l\'historique des notes de frais signées' : '📚 Historique des notes de frais signées') + '</button><div class="ndf-histo-box' + (NDF_HISTO_OPEN ? ' open' : '') + '" id="ndf-histo-box">' + (NDF_HISTO_OPEN ? ndfHistoHtml() : '') + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
   document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
@@ -1398,6 +1135,112 @@ function renderPlannings(){
   box.innerHTML = '<div class="var-grid">' + cardsDispo + cardsManquants + '</div>';
 }
 
+/* ============================ ANNIVERSAIRES / PETITS NOUVEAUX / TROMBINOSCOPE ============================ */
+var PORTAIL_BASE = 'https://edgard-opticiens.github.io/portail-rh-edgard/';
+var TROMBINO_URL = 'https://edgard-opticiens.app.n8n.cloud/webhook/trombinoscope';
+var TROMBINO_KEY = 'Edgard37*';
+var TROMBINO_MAGASINS = ['ANGO','BIARRO','BORDO','CAENPO','CHATO','CHEMILLO','CHOLO','DUNES','ECUME','EDGARD DEVELOPPEMENT','FORMIO','GIRO','HAVRO','JISAM','LYONO','MANSO','MARAIS','MARSEILLO','MUDO','NANCEO','NANTO','NICEO','NIORTO','ORLO','REIMO','STRABO','TURO'];
+
+function chargerAnniversaires(){
+  return fetch(PORTAIL_BASE + 'anniversaires.json').then(function(r){ return r.json(); })
+    .then(function(j){ return { aujourdhui: (j && j.aujourdhui) || [], bientot: (j && j.bientot) || [] }; })
+    .catch(function(){ return { aujourdhui: [], bientot: [] }; });
+}
+function chargerNouveaux(){
+  return fetch(PORTAIL_BASE + 'nouveaux-arrivants.json').then(function(r){ return r.json(); })
+    .then(function(j){ return (j && j.nouveaux) || []; })
+    .catch(function(){ return []; });
+}
+function initiales(prenom, nom){
+  var a = (prenom || '').trim().charAt(0), b = (nom || '').trim().charAt(0);
+  var r = (a + b).toUpperCase();
+  return r || '?';
+}
+function peopleCard(o){
+  var ph;
+  if (o.photoUrl) ph = '<div class="ph"><img src="' + esc(o.photoUrl) + '" alt="" loading="lazy"></div>';
+  else if (o.photoBase64) ph = '<div class="ph"><img src="data:image/jpeg;base64,' + o.photoBase64 + '" alt="" loading="lazy"></div>';
+  else ph = '<div class="ph">' + esc(initiales(o.prenom, o.nom)) + '</div>';
+  return '<div class="people-card' + (o.today ? ' today' : '') + '">' + ph +
+    '<div class="nm">' + esc((o.prenom || '') + ' ' + (o.nom || '')) + '</div>' +
+    (o.ligne1 ? '<div class="st">' + esc(o.ligne1) + '</div>' : '') +
+    (o.ligne2 ? '<div class="wh">' + esc(o.ligne2) + '</div>' : '') +
+    (o.badge ? '<span class="badge">' + esc(o.badge) + '</span>' : '') +
+    '</div>';
+}
+
+function renderAnniversaires(){
+  var aj = STATE.anniversaires.aujourdhui || [], bt = STATE.anniversaires.bientot || [];
+  var total = aj.length + bt.length;
+  document.getElementById('anniv-count').textContent = total;
+  document.getElementById('anniv-preview').innerHTML = previewHtml(
+    aj.map(function(p){ return '🎉 ' + esc(p.prenom + ' ' + p.nom) + ' — aujourd\'hui'; })
+      .concat(bt.map(function(p){ return esc(p.prenom + ' ' + p.nom) + ' — ' + esc(p.dateAffichage); }))
+  );
+  var box = document.getElementById('sec-anniv').querySelector('.panel-body');
+  if (!total){ box.innerHTML = '<div class="empty">Aucun anniversaire dans les 7 prochains jours.</div>'; return; }
+  var cardsAj = aj.map(function(p){ return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: 'Aujourd\'hui', today: true }); }).join('');
+  var cardsBt = bt.slice().sort(function(a, b){ return a.joursRestants - b.joursRestants; })
+    .map(function(p){ return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: p.dateAffichage }); }).join('');
+  box.innerHTML = (cardsAj ? '<div class="panel-note">🎉 Aujourd\'hui</div><div class="people-grid">' + cardsAj + '</div>' : '') +
+    (cardsBt ? '<div class="panel-note" style="margin-top:14px">Dans les 7 prochains jours</div><div class="people-grid">' + cardsBt + '</div>' : '');
+}
+
+function renderNouveaux(){
+  var liste = STATE.nouveaux || [];
+  document.getElementById('nouv-count').textContent = liste.length;
+  document.getElementById('nouv-preview').innerHTML = previewHtml(
+    liste.map(function(p){ return esc(p.prenom + ' ' + p.nom) + ' — ' + esc(p.societe); })
+  );
+  var box = document.getElementById('sec-nouveaux').querySelector('.panel-body');
+  if (!liste.length){ box.innerHTML = '<div class="empty">Aucune arrivée récente (30 derniers jours).</div>'; return; }
+  var cards = liste.slice().sort(function(a, b){ return a.joursDepuisEntree - b.joursDepuisEntree; }).map(function(p){
+    var ligne2 = p.joursDepuisEntree === 0 ? 'Arrivé(e) aujourd\'hui' : 'Arrivé(e) il y a ' + p.joursDepuisEntree + ' jour' + (p.joursDepuisEntree > 1 ? 's' : '');
+    return peopleCard({ prenom: p.prenom, nom: p.nom, ligne1: p.societe, ligne2: ligne2, photoUrl: p.photoUrl });
+  }).join('');
+  box.innerHTML = '<div class="people-grid">' + cards + '</div>';
+}
+
+function trombinoCharger(magasin){
+  if (!magasin) return Promise.resolve([]);
+  if (STATE.trombinoCache[magasin]) return Promise.resolve(STATE.trombinoCache[magasin]);
+  return fetch(TROMBINO_URL + '?magasin=' + encodeURIComponent(magasin), { headers: { 'x-api-key': TROMBINO_KEY } })
+    .then(function(r){ if (!r.ok) throw new Error('http'); return r.json(); })
+    .then(function(j){ var emp = (j && j.employees) || []; STATE.trombinoCache[magasin] = emp; return emp; })
+    .catch(function(){ return null; });
+}
+function onTrombinoMagasinChange(){
+  STATE.trombinoMagasin = document.getElementById('trombino-magasin').value;
+  STATE.trombinoFiltre = '';
+  var fi = document.getElementById('trombino-search'); if (fi) fi.value = '';
+  renderTrombino(true);
+}
+function onTrombinoSearch(){
+  STATE.trombinoFiltre = document.getElementById('trombino-search').value || '';
+  renderTrombino(false);
+}
+function renderTrombino(recharger){
+  var box = document.getElementById('sec-trombino').querySelector('.panel-body');
+  var magasin = STATE.trombinoMagasin;
+  if (!magasin){ box.innerHTML = '<div class="empty">Choisissez un magasin pour afficher les photos.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
+  if (!recharger && STATE.trombinoCache[magasin]){ afficherTrombino(STATE.trombinoCache[magasin]); return; }
+  box.innerHTML = '<div class="empty">Chargement…</div>';
+  trombinoCharger(magasin).then(afficherTrombino);
+  function afficherTrombino(emp){
+    if (emp === null){ box.innerHTML = '<div class="empty">Photos indisponibles pour ce magasin pour le moment.</div>'; document.getElementById('trombino-compte').textContent = ''; return; }
+    var liste = emp.slice();
+    var f = (STATE.trombinoFiltre || '').trim().toUpperCase();
+    if (f) liste = liste.filter(function(p){ return ((p.prenom || '') + ' ' + (p.nom || '')).toUpperCase().indexOf(f) !== -1; });
+    liste.sort(function(a, b){ return (a.nom || '').localeCompare(b.nom || ''); });
+    document.getElementById('trombino-compte').textContent = liste.length + ' / ' + emp.length + ' collaborateur' + (emp.length > 1 ? 's' : '');
+    if (!liste.length){ box.innerHTML = '<div class="empty">Aucun résultat.</div>'; return; }
+    var cards = liste.map(function(p){
+      return peopleCard({ prenom: p.prenom, nom: p.nom, photoBase64: p.photoBase64, badge: p.managerId == null ? 'Responsable magasin' : null });
+    }).join('');
+    box.innerHTML = '<div class="people-grid">' + cards + '</div>';
+  }
+}
+
 function buildPanels(){
   var P = {};
   P.cp = '<div class="panel" id="sec-cp" style="--pc:#E67E22">' +
@@ -1418,7 +1261,7 @@ function buildPanels(){
       '</div>' +
     '</div>';
   P.hsac = '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
-      '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes / notes de frais en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
       '<div class="panel-detail"><div class="panel-body"></div></div>' +
     '</div>';
@@ -1467,12 +1310,35 @@ function buildPanels(){
         '<div class="panel-body" id="stats-body"></div>' +
       '</div>' +
     '</div>';
+  P.anniv = '<div class="panel" id="sec-anniv" style="--pc:var(--purple)">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-anniv\')"><div><div class="n" id="anniv-count">0</div><div class="l">Anniversaires (7 jours)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="anniv-preview" onclick="togglePanel(\'sec-anniv\')"></div>' +
+      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+    '</div>';
+  P.nouveaux = '<div class="panel" id="sec-nouveaux" style="--pc:var(--green)">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-nouveaux\')"><div><div class="n" id="nouv-count">0</div><div class="l">Petits nouveaux (30 jours)</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="nouv-preview" onclick="togglePanel(\'sec-nouveaux\')"></div>' +
+      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+    '</div>';
+  P.trombino = '<div class="panel" id="sec-trombino" style="--pc:var(--spark)">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-trombino\')"><div><div class="n">' + TROMBINO_MAGASINS.length + '</div><div class="l">Trombinoscope — par magasin</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" onclick="togglePanel(\'sec-trombino\')"><div class="pv-item" style="color:#bbb">Cliquez pour choisir un magasin</div></div>' +
+      '<div class="panel-detail">' +
+        '<div class="trombino-bar"><select id="trombino-magasin" onchange="onTrombinoMagasinChange()"><option value="">— Choisir un magasin —</option>' +
+          TROMBINO_MAGASINS.map(function(m){ return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('') +
+        '</select><input type="text" id="trombino-search" placeholder="Rechercher un nom..." oninput="onTrombinoSearch()"></div>' +
+        '<div class="trombino-count" id="trombino-compte"></div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>';
   function sec(num, title, desc, html){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="panel-grid">' + html + '</div></section>';
   }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis.', P.cp + P.var + P.hsac + P.plannings) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats);
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats) +
+    sec('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
+  renderTrombino();
 }
 
 /* ============================ PLANNING EDGARD DEVELOPPEMENT ============================ */
@@ -1948,7 +1814,6 @@ function dirsToday(){ var t = new Date(); DIRS_CUR = new Date(t.getFullYear(), t
 function dirsSelect(k){ DIRS_SEL = (DIRS_SEL === k ? null : k); renderDirs(); }
 function dirsEns(v){ DIRS_ENS = v; renderDirs(); }
 function dirsOnly(){ DIRS_ONLY = !DIRS_ONLY; renderDirs(); }
-function dirsPickDate(v){ if (!/^\d{4}-\d{2}-\d{2}$/.test(v || '')) return; DIRS_SEL = v; var d = new Date(v + 'T00:00:00'); DIRS_CUR = new Date(d.getFullYear(), d.getMonth(), 1); renderDirs(); }
 
 function renderDirs(){
   var panel = document.getElementById('sec-dirs');
@@ -1998,37 +1863,20 @@ function renderDirs(){
     var dt = new Date(y, m, d), k = edevKey(dt), dow = dt.getDay();
     head += '<th class="' + (dow === 0 || dow === 6 ? 'wk ' : '') + (k === edevKey(today) ? 'today ' : '') + (DIRS_SEL === k ? 'sel' : '') + '" onclick="dirsSelect(\'' + k + '\')" title="Voir qui contacter ce jour">' + d + '<small>' + N_JOURS[dow] + '</small></th>';
   }
-  var rowsHtml = '', lastEns = '', mobHtml = '', lastEnsM = '';
+  var rowsHtml = '', lastEns = '';
   STATE.dirs.filter(function(r){ return DIRS_ENS === 'all' || r.ens === DIRS_ENS; }).forEach(function(r){
-    var cells = '', anyAbs = false, seenAbs = {}, absItems = [];
+    var cells = '', anyAbs = false;
     for (var d2 = 1; d2 <= nDays; d2++){
       var dt2 = new Date(y, m, d2), k2 = edevKey(dt2), dow2 = dt2.getDay();
       var st = dirsStateOn(r.dir, dt2);
       var cls = 'c' + (dow2 === 0 || dow2 === 6 ? ' wk' : '') + (k2 === edevKey(today) ? ' today' : '') + (DIRS_SEL === k2 ? ' sel' : '');
       if (st){
         anyAbs = true;
-        var ik = String(st.rid) + '|' + edevKey(st.debut) + '|' + edevKey(st.fin) + '|' + st.cat + '|' + (st.valide ? 1 : 0);
-        if (!seenAbs[ik]){ seenAbs[ik] = 1; absItems.push(st); }
         var title = r.dir.label + ' — ' + dirsTypeLib(st) + (st.valide ? ' (validé)' : ' (en attente)') + ' du ' + dirsFmt(st.debut) + ' au ' + dirsFmt(st.fin) + (r.adj ? ' · adjoint : ' + r.adj.label : '') + (st.cat !== 'cp' ? ' · cliquer pour préciser le type' : '');
         cells += '<td class="' + cls + (st.cat !== 'cp' ? ' pick' : '') + '" title="' + esc(title) + '"' + (st.cat !== 'cp' ? ' onclick="absPick(\'' + attrSafe(String(st.rid)) + '\')"' : '') + '><span class="b ' + st.cat + '-' + (st.valide ? 'valide' : 'attente') + '"></span></td>';
       } else cells += '<td class="' + cls + '"></td>';
     }
     if (DIRS_ONLY && !anyAbs) return;
-    // --- carte mobile ---
-    if (r.ens !== lastEnsM){ lastEnsM = r.ens; mobHtml += '<div class="dm-ens">' + (r.ens === 'GdO' ? 'Générale d\'Optique' : 'Edgard Opticiens') + '</div>'; }
-    var stSel = dirsStateOn(r.dir, selDay);
-    var badge = (stSel && stSel.valide) ? '<span class="dm-badge">Absent(e)' + (edevKey(selDay) === edevKey(today) ? ' aujourd\'hui' : ' ce jour-là') + '</span>' : '';
-    var itemsHtml = absItems.map(function(it){
-      var lbl = edevKey(it.debut) === edevKey(it.fin)
-        ? it.debut.toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' })
-        : dirsFmt(it.debut) + ' → ' + dirsFmt(it.fin);
-      return '<div class="dm-it ' + it.cat + '-' + (it.valide ? 'valide' : 'attente') + '"><div><span class="d">' + esc(lbl) + '</span><span class="t">' + esc(dirsTypeLib(it)) + (it.valide ? ' · validé' : ' · en attente') + '</span></div>' +
-        (it.cat !== 'cp' ? '<button class="dm-pick" onclick="absPick(\'' + attrSafe(String(it.rid)) + '\')">Préciser</button>' : '') + '</div>';
-    }).join('');
-    mobHtml += '<div class="dm-card"><div class="dm-top"><div><div class="dm-mag">' + esc(r.mag) + '</div><div class="dm-who">' +
-      (r.dir.email ? '<a href="mailto:' + esc(r.dir.email) + '">' + esc(r.dir.label) + '</a>' : esc(r.dir.label)) + '</div></div>' + badge + '</div>' +
-      '<div class="dm-adj">' + (r.adj ? 'Adjoint : ' + (r.adj.email ? '<a href="mailto:' + esc(r.adj.email) + '">' + esc(r.adj.label) + '</a>' : esc(r.adj.label)) : 'Pas d\'adjoint') + '</div>' +
-      '<div class="dm-abs">' + (itemsHtml || '<div class="dm-none">Aucune absence en ' + EDEV_MOIS[m].toLowerCase() + '</div>') + '</div></div>';
     if (r.ens !== lastEns){ lastEns = r.ens; rowsHtml += '<tr class="sep"><td colspan="' + (nDays + 1) + '">' + (r.ens === 'GdO' ? 'Générale d\'Optique' : 'Edgard Opticiens') + '</td></tr>'; }
     rowsHtml += '<tr><td class="first"><div class="mag">' + esc(r.mag) + '</div><div class="who">' +
       (r.dir.email ? '<a href="mailto:' + esc(r.dir.email) + '">' + esc(r.dir.label) + '</a>' : esc(r.dir.label)) + '</div>' +
@@ -2037,9 +1885,7 @@ function renderDirs(){
   });
   if (!rowsHtml) rowsHtml = '<tr><td class="first" colspan="' + (nDays + 1) + '" style="padding:18px;color:#888">Aucune absence de directeur sur ce mois.</td></tr>';
 
-  if (!mobHtml) mobHtml = '<div class="dm-none" style="padding:14px 2px">Aucune absence de directeur sur ce mois.</div>';
   body.innerHTML = contact +
-    '<div class="dm-datebar"><label for="dirs-date">Qui contacter un autre jour :</label><input type="date" id="dirs-date" value="' + edevKey(selDay) + '" onchange="dirsPickDate(this.value)"></div>' +
     '<div class="ecal-bar"><button onclick="dirsShift(-1)">‹ Précédent</button><span class="lbl">' + EDEV_MOIS[m] + ' ' + y + '</span><button onclick="dirsShift(1)">Suivant ›</button><button onclick="dirsToday()">Aujourd\'hui</button></div>' +
     '<div class="dfilters">' +
       '<button class="pill' + (DIRS_ENS === 'all' ? ' on' : '') + '" onclick="dirsEns(\'all\')">Tous</button>' +
@@ -2053,10 +1899,9 @@ function renderDirs(){
       '<span class="li"><span class="sw" style="background:var(--blue)"></span>RTT</span>' +
       '<span class="li"><span class="sw" style="background:var(--orange)"></span>Absence validée</span>' +
       '<span class="li"><span class="sw" style="background:#FDEBD8;border:1.5px dashed var(--orange)"></span>Absence en attente</span>' +
-      '<span class="li dmob-hide">Cliquez sur un jour pour voir qui contacter ce jour-là</span>' +
+      '<span class="li">Cliquez sur un jour pour voir qui contacter ce jour-là</span>' +
     '</div>' +
-    '<div class="dgrid-wrap"><table class="dgrid"><thead><tr>' + head + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
-    '<div class="dmob">' + mobHtml + '</div>';
+    '<div class="dgrid-wrap"><table class="dgrid"><thead><tr>' + head + '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
 }
 
 function previewHtml(lines){
@@ -2212,7 +2057,6 @@ function loadAll(){
   var pCP = authRead('demandes').catch(function(){ return { data: [], archive: [] }; });
   var pHS = authRead('hs').catch(function(){ return { data: [] }; });
   var pAC = authRead('acompte').catch(function(){ return { data: [] }; });
-  var pNDF = authRead('ndf').catch(function(){ return { data: [] }; });
   var pSoldes = authRead('soldes').catch(function(){ return { tout: {} }; });
   var pPlannings = authRead('plannings').catch(function(){ return { plannings: [], magasinsManquants: [] }; });
   var pVar = fetchVariables(VAR_PERIODE);
@@ -2220,8 +2064,10 @@ function loadAll(){
   var pDirs = dirsLoad();
   var pMotifs = absMotifsLoad();
   var pStats = statsLoad();
+  var pAnniv = chargerAnniversaires();
+  var pNouv = chargerNouveaux();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pNDF]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -2243,7 +2089,6 @@ function loadAll(){
 
     STATE.hs = (results[1] && results[1].data) || [];
     STATE.acompte = (results[2] && results[2].data) || [];
-    STATE.ndf = (results[10] && results[10].data) || [];
 
     var soldesParsed = buildSoldesFlat((results[3] && results[3].tout) || {}, (results[3] && results[3].futuresCP) || {});
     STATE.soldes = soldesParsed.list;
@@ -2261,6 +2106,10 @@ function loadAll(){
     renderDirs();
     STATE.pstats = results[9] || { ok: false, rows: [] };
     renderStats();
+    STATE.anniversaires = results[10] || { aujourdhui: [], bientot: [] };
+    STATE.nouveaux = results[11] || [];
+    renderAnniversaires();
+    renderNouveaux();
     Promise.all([edevEnrich(), dirsEnrich()]).then(function(){ absRebuildAll(); absRenderAll(); });
 
     document.getElementById('lastUpdate').textContent = 'Mis à jour le ' + new Date().toLocaleString('fr-FR');
