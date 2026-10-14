@@ -663,9 +663,11 @@ function togglePanel(id){
 /* ---- Recherche par collaborateur ---- */
 var FICHE_DEBOUNCE_T = null;
 var FICHE_SELECTED_KEY = null;
+var FICHE_HISTORIQUE_OPEN = false;
 
 function onFicheCollabInput(){
   FICHE_SELECTED_KEY = null;
+  FICHE_HISTORIQUE_OPEN = false;
   clearTimeout(FICHE_DEBOUNCE_T);
   FICHE_DEBOUNCE_T = setTimeout(renderFicheCollab, 150);
 }
@@ -674,6 +676,12 @@ function clearFicheCollab(){
   var input = document.getElementById('fiche-collab-input');
   if (input) input.value = '';
   FICHE_SELECTED_KEY = null;
+  FICHE_HISTORIQUE_OPEN = false;
+  renderFicheCollab();
+}
+
+function toggleFicheHistorique(){
+  FICHE_HISTORIQUE_OPEN = !FICHE_HISTORIQUE_OPEN;
   renderFicheCollab();
 }
 
@@ -705,6 +713,7 @@ function collabIndex(){
 
 function fichePick(key){
   FICHE_SELECTED_KEY = key;
+  FICHE_HISTORIQUE_OPEN = false;
   renderFicheCollab();
 }
 
@@ -712,6 +721,38 @@ function ficheItemCard(cls, who, tagCls, tagLabel, meta, since){
   return '<div class="item-card ' + cls + '"><div class="top"><span class="who">' + who + '</span><span class="tag ' + tagCls + '">' + esc(tagLabel) + '</span></div>' +
     (meta ? '<div class="meta">' + meta + '</div>' : '') +
     (since ? '<div class="since">' + esc(since) + '</div>' : '') + '</div>';
+}
+
+/* Libelle affiche pour une demande : priorite a la correction manuelle RH (STATE.motifs, par id),
+   sinon au motif reel lu dans le payload de la demande quand elle a un lien associe (ex: une
+   "ABS" peut en fait etre une RTT, un CSS, un evenement familial... — meme mecanisme que les
+   plannings Edgard Dev / directeurs), sinon le type brut tel quel ("CP", "ABS"...). */
+function ficheTypeLabel(d){
+  var corrige = STATE.motifs[d.id];
+  if (corrige) return absMotifLib(corrige);
+  if (/ABS/.test(String(d.type || '').toUpperCase())){
+    var k = absPayKey(d.lien);
+    if (k){
+      var ck = absKeyStr(k);
+      if (ck in ABS_PAY){
+        var n = absNorm(ABS_PAY[ck]);
+        if (n.abs && n.abs.motif) return absMotifLib(n.abs.motif);
+      }
+    }
+    return 'Absence';
+  }
+  return d.type || 'CP';
+}
+
+/* Vrai s'il reste des demandes ABS dont le motif reel n'a pas encore ete recupere (payload pas
+   encore en cache) — sert a ne lancer l'enrichissement qu'une fois par lot. */
+function ficheNeedsAbsEnrich(items){
+  return items.some(function(d){
+    if (!/ABS/.test(String(d.type || '').toUpperCase())) return false;
+    var k = absPayKey(d.lien);
+    if (!k) return false;
+    return !(absKeyStr(k) in ABS_PAY);
+  });
 }
 
 function renderFicheCollab(){
@@ -772,12 +813,41 @@ function ficheCollabContent(person){
     .concat(cpAVenir.map(function(d){ return { d: d, valide: true }; }))
     .sort(function(a,b){ return excelOrIsoDate(a.d.date_debut) - excelOrIsoDate(b.d.date_debut); });
 
+  // Historique : les demandes validees de ce collaborateur dont la fin est deja passee — repliees
+  // par defaut, affichables a la demande via le lien "Voir aussi les anciennes demandes".
+  var cpPasse = STATE.cpHistorique.filter(function(d){
+    if (personKey(d.nom, d.prenom) !== K) return false;
+    var fin = excelOrIsoDate(d.date_fin || d.date_debut);
+    return !(fin && fin >= today);
+  }).sort(function(a,b){ return excelOrIsoDate(b.date_debut) - excelOrIsoDate(a.date_debut); });
+
+  // Le vrai motif d'une demande "ABS" (RTT, CSS, evenement familial...) peut necessiter un appel
+  // reseau la premiere fois (payload lie a la demande) — on affiche tout de suite avec ce qu'on a,
+  // puis on relance un rendu une fois le motif recupere, sans boucle (le cache coupe le 2e passage).
+  var itemsPourMotif = cpAll.map(function(x){ return x.d; }).concat(cpPasse);
+  if (ficheNeedsAbsEnrich(itemsPourMotif)){
+    absEnrich(itemsPourMotif).then(function(){ renderFicheCollab(); });
+  }
+
   var cpHtml = cpAll.length ? '<div class="item-grid">' + cpAll.map(function(x){
     var d = x.d;
     var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
     var meta = esc(d.societe || '') + (dates ? ' — ' + dates : '') + (!x.valide && d.en_attente_nom ? '<br>En attente de ' + esc(d.en_attente_nom) : '');
-    return ficheItemCard(x.valide ? 'complet' : 'en_attente', esc(d.type || 'CP'), x.valide ? 'complet' : 'en_attente', x.valide ? 'Validé' : 'En attente', meta, '');
+    return ficheItemCard(x.valide ? 'complet' : 'en_attente', esc(ficheTypeLabel(d)), x.valide ? 'complet' : 'en_attente', x.valide ? 'Validé' : 'En attente', meta, '');
   }).join('') + '</div>' : '<div class="empty">Aucune demande de CP/absence en cours ou à venir.</div>';
+
+  var cpHistoToggle = cpPasse.length
+    ? '<div style="margin-top:10px"><a style="font-size:12px;color:var(--g);font-weight:700;cursor:pointer" onclick="toggleFicheHistorique()">' +
+        (FICHE_HISTORIQUE_OPEN ? '▴ Masquer les anciennes demandes' : '▾ Voir aussi les anciennes demandes (' + cpPasse.length + ')') + '</a></div>'
+    : '';
+  var cpPasseHtml = (FICHE_HISTORIQUE_OPEN && cpPasse.length)
+    ? '<div class="item-grid" style="margin-top:10px">' + cpPasse.map(function(d){
+        var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
+        var meta = esc(d.societe || '') + (dates ? ' — ' + dates : '');
+        return ficheItemCard('complet', esc(ficheTypeLabel(d)), 'complet', 'Validé', meta, 'Validée le ' + fmtDate(d.date_derniere_action));
+      }).join('') + '</div>'
+    : '';
+  cpHtml += cpHistoToggle + cpPasseHtml;
 
   // Heures sup / acomptes en attente
   var hsac = STATE.hs.filter(function(r){ return personKey(r.nom, r.prenom) === K; }).map(function(r){
