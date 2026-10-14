@@ -460,6 +460,9 @@ var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?mag
 var N8N_LIEN_COURT = 'https://edgard-opticiens.app.n8n.cloud/webhook/lien-court-get';
 var N8N_ABS_MOTIFS = 'https://edgard-opticiens.app.n8n.cloud/webhook/absence-motifs';
 var N8N_EDEV_PAYLOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-dev-payload-get';
+var N8N_LIENS_LISTER = 'https://edgard-opticiens.app.n8n.cloud/webhook/liens-courts-lister';
+var N8N_LIENS_REVOQUER = 'https://edgard-opticiens.app.n8n.cloud/webhook/liens-courts-revoquer';
+var N8N_LIENS_REACTIVER = 'https://edgard-opticiens.app.n8n.cloud/webhook/liens-courts-reactiver';
 var N8N_DIRECTEURS = 'https://edgard-opticiens.app.n8n.cloud/webhook/directeurs-liste';
 var N8N_PORTAIL_STATS = 'https://edgard-opticiens.app.n8n.cloud/webhook/portail-stats?days=190';
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
@@ -605,7 +608,7 @@ function libellePeriode(p){
 
 /* ============================ DONNEES ============================ */
 var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
-  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '' };
+  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -955,6 +958,91 @@ function supprimerCP(id){
     .catch(function(){
       alert("Erreur lors de la suppression — réessayez.");
       if (btn){ btn.disabled = false; btn.textContent = '🗑️ Supprimer'; }
+    });
+}
+
+function renderLiens(){
+  var liens = STATE.liens || [];
+  var srcFilter = (document.getElementById('liens-source-filter')||{}).value || '';
+  var showRevoked = !!(document.getElementById('liens-show-revoked')||{}).checked;
+  var q = ((document.getElementById('liens-search')||{}).value || '').trim().toLowerCase();
+  var filtered = liens.filter(function(l){
+    if (srcFilter && l.source !== srcFilter) return false;
+    if (!showRevoked && l.revoque) return false;
+    if (q){
+      var hay = ((l.nom||'') + ' ' + (l.prenom||'') + ' ' + (l.societe||'')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+  var body = filtered.length ? '<div class="item-grid">' + filtered.map(function(l){
+    var who = esc(l.prenom) + ' ' + esc((l.nom||'').toUpperCase());
+    var soc = esc(l.societe || (l.source === 'edev' ? 'Edgard Développement' : ''));
+    var dates = l.debut ? (fmtDate(l.debut) + (l.fin && l.fin !== l.debut ? ' → ' + fmtDate(l.fin) : '')) : '';
+    var badge = l.revoque ? '<span class="tag complet" style="background:#999">Révoqué</span>' : '<span class="tag en_attente">Actif</span>';
+    var dom = domId(l.source + '_' + l.id);
+    var btn = l.revoque
+      ? '<button type="button" class="relance" id="reactiver-' + dom + '" onclick="reactiverLien(\'' + attrSafe(l.id) + '\',\'' + attrSafe(l.source) + '\')">↻ Réactiver</button>'
+      : '<button type="button" class="delete" id="revoquer-' + dom + '" onclick="revoquerLien(\'' + attrSafe(l.id) + '\',\'' + attrSafe(l.source) + '\')">⛔ Révoquer</button>';
+    return '<div class="item-card ' + (l.revoque ? 'complet' : 'en_attente') + '" id="card-lien-' + dom + '"><div class="top"><span class="who">' + (who.trim() || '(sans nom)') + '</span>' + badge + '</div>' +
+      '<div class="meta">' + soc + (dates ? ' — ' + dates : '') + (l.type ? '<br>' + esc(l.type) : '') + '</div>' +
+      '<div class="since">Créé le ' + (fmtDate(l.date_creation) || '?') + '</div>' +
+      '<div class="btnrow">' + btn + '</div></div>';
+  }).join('') + '</div>' : '<div class="empty">Aucun lien' + (q || srcFilter || showRevoked ? ' correspondant' : '') + '.</div>';
+  document.getElementById('sec-liens').querySelector('.panel-body').innerHTML = body;
+  var actifs = liens.filter(function(l){ return !l.revoque; });
+  document.getElementById('liens-count').textContent = actifs.length;
+  document.getElementById('liens-preview').innerHTML = previewHtml(actifs.slice(0, 5).map(function(l){
+    return esc(l.prenom) + ' ' + esc((l.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(l.societe || (l.source === 'edev' ? 'Edgard Dév.' : ''));
+  }));
+}
+
+function revoquerLien(id, source){
+  if (!confirm('Révoquer ce lien ? La personne qui le détient ne pourra plus l\'ouvrir. Vous pourrez le réactiver à tout moment depuis ce panneau.')) return;
+  var dom = domId(source + '_' + id);
+  var btn = document.getElementById('revoquer-' + dom);
+  if (btn){ btn.disabled = true; btn.textContent = 'Révocation…'; }
+  authFetch(N8N_LIENS_REVOQUER, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: id, source: source })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        var l = (STATE.liens||[]).filter(function(x){ return x.id === id && x.source === source; })[0];
+        if (l) l.revoque = true;
+        renderLiens();
+      } else {
+        alert("Erreur lors de la révocation — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '⛔ Révoquer'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de la révocation — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '⛔ Révoquer'; }
+    });
+}
+
+function reactiverLien(id, source){
+  var dom = domId(source + '_' + id);
+  var btn = document.getElementById('reactiver-' + dom);
+  if (btn){ btn.disabled = true; btn.textContent = 'Réactivation…'; }
+  authFetch(N8N_LIENS_REACTIVER, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: id, source: source })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        var l = (STATE.liens||[]).filter(function(x){ return x.id === id && x.source === source; })[0];
+        if (l){ l.revoque = false; l.conserver_actif = true; }
+        renderLiens();
+      } else {
+        alert("Erreur lors de la réactivation — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '↻ Réactiver'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de la réactivation — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '↻ Réactiver'; }
     });
 }
 
@@ -1339,6 +1427,17 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
+  P.liens = '<div class="panel" id="sec-liens" style="--pc:#6C3483">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-liens\')"><div><div class="n" id="liens-count">0</div><div class="l">Liens courts actifs</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="liens-preview" onclick="togglePanel(\'sec-liens\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><select id="liens-source-filter" onchange="renderLiens()"><option value="">Toutes sources</option><option value="conges">Congés / heures sup</option><option value="edev">Edgard Développement</option></select>' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-left:10px;white-space:nowrap"><input type="checkbox" id="liens-show-revoked" onchange="renderLiens()"> Afficher les révoqués</label>' +
+        '<input type="text" id="liens-search" placeholder="Rechercher un nom..." oninput="renderLiens()" style="margin-left:10px"></div>' +
+        '<div class="panel-note">Chaque demande de congés, d\'absence ou d\'heures sup génère un lien de signature permanent. Le révoquer le désactive immédiatement sans le supprimer ; vous pouvez le réactiver à tout moment — y compris après la révocation automatique au bout d\'un an.</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>';
   P.plannings = '<div class="panel" id="sec-plannings" style="--pc:#1ABC9C">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-plannings\')"><div><div class="n" id="plannings-count">0</div><div class="l">Plannings apprentis disponibles</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="plannings-preview" onclick="togglePanel(\'sec-plannings\')"></div>' +
@@ -1401,7 +1500,7 @@ function buildPanels(){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="ve-stack">' + html + '</div></section>';
   }
   document.getElementById('panels').innerHTML =
-    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis.', P.cp + P.var + P.hsac + P.plannings) +
+    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.plannings + P.liens) +
     sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
@@ -2132,8 +2231,11 @@ function loadAll(){
   var pStats = statsLoad();
   var pAnniv = chargerAnniversaires();
   var pNouv = chargerNouveaux();
+  var pLiens = authFetch(N8N_LIENS_LISTER, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) })
+    .then(function(r){ return r.json().catch(function(){ return { ok:false, liens: [] }; }); })
+    .catch(function(){ return { ok:false, liens: [] }; });
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -2164,10 +2266,12 @@ function loadAll(){
     STATE.plannings = (results[4] && results[4].plannings) || [];
     STATE.planningsManquants = (results[4] && results[4].magasinsManquants) || [];
 
+    STATE.liens = (results[12] && results[12].liens) || [];
     renderCP();
     renderHsAc();
     renderSoldes();
     renderPlannings();
+    renderLiens();
     renderEdev();
     renderDirs();
     STATE.pstats = results[9] || { ok: false, rows: [] };
