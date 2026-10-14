@@ -332,6 +332,19 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .stat-card .sub a{color:var(--g);font-weight:700;text-decoration:none;cursor:pointer}
 .stat-card .sub a:hover{text-decoration:underline}
 
+/* Recherche par collaborateur */
+.search-collab{display:flex;align-items:center;gap:12px;margin-bottom:28px;background:#fff;border:1px solid var(--bd);border-radius:14px;padding:12px 18px;box-shadow:0 3px 14px rgba(60,40,10,.05)}
+.search-collab .ico{font-size:16px;flex:0 0 auto;color:var(--md)}
+.search-collab input{flex:1;min-width:0;border:none;outline:none;font-size:15px;font-family:'Inter',sans-serif;background:transparent;color:var(--dk)}
+.search-collab input::placeholder{color:var(--md)}
+.search-collab-count{font-size:12px;color:var(--md);white-space:nowrap}
+.search-collab-clear{border:1px solid var(--bd);background:var(--lt);color:var(--dk);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.search-collab-clear:hover{background:var(--bd)}
+mark.search-hit{background:var(--gl);color:var(--dk);padding:0 2px;border-radius:3px;font-weight:700}
+.panel.search-nomatch{opacity:.3;filter:grayscale(55%)}
+.panel.search-match{box-shadow:0 0 0 2px var(--g),0 3px 14px rgba(60,40,10,.07)}
+@media(max-width:620px){.search-collab{flex-wrap:wrap}.search-collab input{flex:1 1 100%;order:1}.search-collab-count{order:3;flex:1 1 100%}.search-collab-clear{order:2}}
+
 .panel-toolbar input[type=number],.panel-toolbar input[type=text]{font-family:'Inter',sans-serif;font-size:12.5px;padding:6px 10px;border:1.5px solid var(--bd);border-radius:7px;background:#fff;color:var(--dk);width:90px}
 .panel-toolbar input[type=text]{width:160px}
 .soldes-wrap{overflow-x:auto}
@@ -406,6 +419,13 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 </header>
 
 <div id="bandeau-synthese" class="synthese"></div>
+
+<div class="search-collab" id="search-collab">
+  <span class="ico" aria-hidden="true">🔍</span>
+  <input type="text" id="search-collab-input" placeholder="Rechercher un collaborateur (nom, prénom, magasin...)" oninput="onSearchCollabInput()">
+  <span class="search-collab-count" id="search-collab-count"></span>
+  <button class="search-collab-clear" id="search-collab-clear" type="button" onclick="clearSearchCollab()" style="display:none">✕ Effacer</button>
+</div>
 
 <div id="panels"></div>
 </div>
@@ -639,6 +659,127 @@ var VAR_PERIODE = null;
 function togglePanel(id){
   document.getElementById(id).classList.toggle('expanded');
   if (id === 'sec-stats' && typeof renderStats === 'function') setTimeout(renderStats, 0);
+}
+
+/* ---- Recherche par collaborateur ---- */
+var SEARCH_PREV_EXPANDED = null;
+var SEARCH_DEBOUNCE_T = null;
+var SEARCH_SKIP_TAGS = { SCRIPT: 1, STYLE: 1, MARK: 1, OPTION: 1, SELECT: 1, TEXTAREA: 1 };
+
+function onSearchCollabInput(){
+  clearTimeout(SEARCH_DEBOUNCE_T);
+  SEARCH_DEBOUNCE_T = setTimeout(applySearchCollab, 150);
+}
+
+function escapeRegexSearch(s){
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function clearHighlightsSearch(root){
+  var marks = root.querySelectorAll('mark.search-hit');
+  for (var i = 0; i < marks.length; i++) {
+    var m = marks[i];
+    var parent = m.parentNode;
+    if (!parent) continue;
+    parent.replaceChild(document.createTextNode(m.textContent), m);
+    parent.normalize();
+  }
+}
+
+function highlightTextNodesSearch(root, query){
+  var count = 0;
+  var testRe = new RegExp(escapeRegexSearch(query), 'i');
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+  var nodes = [];
+  var n;
+  while ((n = walker.nextNode())) {
+    var p = n.parentNode;
+    if (!p || !p.tagName || SEARCH_SKIP_TAGS[p.tagName]) continue;
+    if (testRe.test(n.nodeValue)) nodes.push(n);
+  }
+  for (var j = 0; j < nodes.length; j++) {
+    var node = nodes[j];
+    var text = node.nodeValue;
+    var frag = document.createDocumentFragment();
+    var lastIndex = 0;
+    var localRe = new RegExp(escapeRegexSearch(query), 'gi');
+    var m;
+    while ((m = localRe.exec(text))) {
+      if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+      var mark = document.createElement('mark');
+      mark.className = 'search-hit';
+      mark.textContent = m[0];
+      frag.appendChild(mark);
+      lastIndex = m.index + m[0].length;
+      count++;
+      if (m[0].length === 0) localRe.lastIndex++;
+    }
+    if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+    node.parentNode.replaceChild(frag, node);
+  }
+  return count;
+}
+
+function applySearchCollab(){
+  var input = document.getElementById('search-collab-input');
+  var countEl = document.getElementById('search-collab-count');
+  var clearBtn = document.getElementById('search-collab-clear');
+  var panelsRoot = document.getElementById('panels');
+  if (!input || !panelsRoot) return;
+  var query = (input.value || '').trim();
+  var allPanels = Array.prototype.slice.call(panelsRoot.querySelectorAll('.panel'));
+
+  clearHighlightsSearch(panelsRoot);
+  allPanels.forEach(function(p){ p.classList.remove('search-match'); p.classList.remove('search-nomatch'); });
+
+  if (!query || query.length < 2) {
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (countEl) countEl.textContent = '';
+    if (SEARCH_PREV_EXPANDED) {
+      allPanels.forEach(function(p){
+        if (SEARCH_PREV_EXPANDED.indexOf(p.id) !== -1) p.classList.add('expanded');
+        else p.classList.remove('expanded');
+      });
+      SEARCH_PREV_EXPANDED = null;
+    }
+    return;
+  }
+
+  if (!SEARCH_PREV_EXPANDED) {
+    SEARCH_PREV_EXPANDED = allPanels.filter(function(p){ return p.classList.contains('expanded'); }).map(function(p){ return p.id; });
+  }
+  if (clearBtn) clearBtn.style.display = '';
+
+  var totalHits = 0, matchedPanels = 0;
+  allPanels.forEach(function(panel){
+    var body = panel.querySelector('.panel-detail') || panel;
+    var hits = highlightTextNodesSearch(body, query);
+    if (hits > 0) {
+      matchedPanels++;
+      totalHits += hits;
+      panel.classList.add('expanded');
+      panel.classList.add('search-match');
+    } else {
+      panel.classList.remove('expanded');
+      panel.classList.add('search-nomatch');
+    }
+  });
+
+  if (countEl) {
+    countEl.textContent = totalHits === 0
+      ? 'Aucun résultat pour « ' + query + ' »'
+      : totalHits + ' résultat' + (totalHits > 1 ? 's' : '') + ' dans ' + matchedPanels + ' panneau' + (matchedPanels > 1 ? 'x' : '') + ' pour « ' + query + ' »';
+  }
+  if (totalHits > 0) {
+    var firstMark = panelsRoot.querySelector('mark.search-hit');
+    if (firstMark) firstMark.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+}
+
+function clearSearchCollab(){
+  var input = document.getElementById('search-collab-input');
+  if (input) input.value = '';
+  applySearchCollab();
 }
 var STATS_RZ = null;
 window.addEventListener('resize', function(){ clearTimeout(STATS_RZ); STATS_RZ = setTimeout(function(){ if (typeof renderStats === 'function') renderStats(); }, 250); });
@@ -1343,13 +1484,15 @@ function renderPlannings(){
 var PORTAIL_BASE = 'https://edgard-opticiens.github.io/portail-rh-edgard/';
 var TROMBINO_MAGASINS = ['ANGO','BIARRO','BORDO','CAENPO','CHATO','CHEMILLO','CHOLO','DUNES','ECUME','EDGARD DEVELOPPEMENT','FORMIO','GIRO','HAVRO','JISAM','LYONO','MANSO','MARAIS','MARSEILLO','MUDO','NANCEO','NANTO','NICEO','NIORTO','ORLO','REIMO','STRABO','TURO'];
 
+var N8N_ANNIVERSAIRES = 'https://edgard-opticiens.app.n8n.cloud/webhook/anniversaires-lecture';
+var N8N_NOUVEAUX = 'https://edgard-opticiens.app.n8n.cloud/webhook/nouveaux-arrivants-lecture';
 function chargerAnniversaires(){
-  return fetch(PORTAIL_BASE + 'anniversaires.json').then(function(r){ return r.json(); })
+  return fetch(N8N_ANNIVERSAIRES, { cache: 'no-store' }).then(function(r){ return r.json(); })
     .then(function(j){ return { aujourdhui: (j && j.aujourdhui) || [], bientot: (j && j.bientot) || [] }; })
     .catch(function(){ return { aujourdhui: [], bientot: [] }; });
 }
 function chargerNouveaux(){
-  return fetch(PORTAIL_BASE + 'nouveaux-arrivants.json').then(function(r){ return r.json(); })
+  return fetch(N8N_NOUVEAUX, { cache: 'no-store' }).then(function(r){ return r.json(); })
     .then(function(j){ return (j && j.nouveaux) || []; })
     .catch(function(){ return []; });
 }
