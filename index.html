@@ -492,6 +492,7 @@ var N8N_VAR_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-
 var N8N_CP_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-relance-manuelle';
 var N8N_CP_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/conges-supprimer-manuelle';
 var N8N_HS        = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-heures-sup';
+var N8N_HS_CORRIGER = 'https://edgard-opticiens.app.n8n.cloud/webhook/heures-sup-corriger';
 var N8N_ACOMPTE   = 'https://edgard-opticiens.app.n8n.cloud/webhook/get-acompte';
 var N8N_SOLDES    = 'https://edgard-opticiens.app.n8n.cloud/webhook/solde-cp?magasin=__ALL__';
 var N8N_LIEN_COURT = 'https://edgard-opticiens.app.n8n.cloud/webhook/lien-court-get';
@@ -1241,6 +1242,94 @@ function supprimerCP(id){
     });
 }
 
+/* Correction RH des lignes d'heures sup (garde-fou anti-doublon de semaine) */
+var HS_CORRECTION_CTX = null;
+var HS_CORRECTION_LIGNES = [];
+function hsCorrigerApi(body){
+  return authFetch(N8N_HS_CORRIGER, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  }).then(function(r){ return r.json().catch(function(){ return {ok:false, error:'reponse'}; }); });
+}
+function ouvrirCorrectionHS(societe, nom, prenom, periode){
+  var old = document.getElementById('hs-correction'); if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'hs-correction';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px 22px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);font-family:\'Inter\',sans-serif;color:#1a1a1a">' +
+    '<div style="font-family:\'Fraunces\',serif;font-size:16px;font-weight:700;margin-bottom:4px">Corriger les heures sup</div>' +
+    '<div style="font-size:12.5px;color:#666;margin-bottom:12px">' + esc(prenom) + ' ' + esc((nom||'').toUpperCase()) + ' — ' + esc(societe) + ' — ' + esc(periode) + '</div>' +
+    '<div id="hs-correction-body" style="font-size:12.5px;color:#999">Chargement…</div>' +
+    '<div style="font-size:11px;color:#999;margin-top:10px">Chaque semaine ne doit apparaître qu\'une seule fois. Une correction est impossible une fois la demande signée par la Direction.</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center"><span id="hs-correction-msg" style="font-size:12px;color:#c0392b;flex:1"></span>' +
+    '<button id="hs-correction-close" style="font-family:inherit;font-size:12.5px;padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">Fermer</button></div></div>';
+  document.body.appendChild(ov);
+  function close(){ ov.remove(); }
+  ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+  document.getElementById('hs-correction-close').onclick = close;
+  HS_CORRECTION_CTX = { societe: societe, nom: nom, prenom: prenom, periode: periode };
+  hsCorrectionCharger();
+}
+function fermerCorrectionHS(){ var ov = document.getElementById('hs-correction'); if (ov) ov.remove(); }
+function hsCorrectionCharger(){
+  var ctx = HS_CORRECTION_CTX;
+  var body = document.getElementById('hs-correction-body');
+  var msg = document.getElementById('hs-correction-msg');
+  if (!ctx || !body) return;
+  body.innerHTML = 'Chargement…';
+  if (msg) msg.textContent = '';
+  hsCorrigerApi({ action: 'get', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode })
+    .then(function(res){
+      if (!res || !res.ok){ body.innerHTML = ''; if (msg) msg.textContent = (res && res.error) || 'Erreur de chargement.'; return; }
+      HS_CORRECTION_LIGNES = res.lignes || [];
+      hsCorrectionRenderLignes();
+    })
+    .catch(function(){ body.innerHTML = ''; if (msg) msg.textContent = 'Erreur de chargement — réessayez.'; });
+}
+function hsCorrectionRenderLignes(){
+  var body = document.getElementById('hs-correction-body');
+  if (!body) return;
+  var lignes = HS_CORRECTION_LIGNES || [];
+  if (!lignes.length){ body.innerHTML = '<div style="color:#999">Aucune ligne.</div>'; return; }
+  body.innerHTML = lignes.map(function(l, i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eee;flex-wrap:wrap">' +
+      '<span style="font-size:12px;color:#666">Sem. <input type="number" min="1" max="53" value="' + esc(l.s) + '" id="hs-correction-s-' + i + '" style="width:48px;font-family:inherit;font-size:12.5px;padding:3px 5px;border:1px solid #ddd;border-radius:5px;margin-left:4px"></span>' +
+      '<span style="font-size:12px;color:#666">' + esc(l.h) + ' h — ' + esc(l.motif || '') + '</span>' +
+      '<span style="flex:1"></span>' +
+      '<button type="button" onclick="corrigerSemaineHS(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">Enregistrer</button>' +
+      '<button type="button" onclick="supprimerLigneHS(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-family:inherit">Supprimer</button>' +
+      '</div>';
+  }).join('');
+}
+function corrigerSemaineHS(index){
+  var ctx = HS_CORRECTION_CTX;
+  var inp = document.getElementById('hs-correction-s-' + index);
+  var msg = document.getElementById('hs-correction-msg');
+  if (!ctx || !inp) return;
+  var semaine = parseInt(inp.value, 10);
+  if (!semaine || semaine < 1 || semaine > 53){ if (msg) msg.textContent = 'Numéro de semaine invalide.'; return; }
+  if (msg) msg.textContent = '';
+  hsCorrigerApi({ action: 'corriger_semaine', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode, index: index, semaine: semaine })
+    .then(function(res){
+      if (!res || !res.ok){ if (msg) msg.textContent = (res && res.error) || 'Erreur — réessayez.'; return; }
+      hsCorrectionCharger();
+    })
+    .catch(function(){ if (msg) msg.textContent = 'Erreur — réessayez.'; });
+}
+function supprimerLigneHS(index){
+  var ctx = HS_CORRECTION_CTX;
+  var msg = document.getElementById('hs-correction-msg');
+  if (!ctx) return;
+  if (!confirm('Supprimer cette ligne ?')) return;
+  if (msg) msg.textContent = '';
+  hsCorrigerApi({ action: 'supprimer_ligne', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode, index: index })
+    .then(function(res){
+      if (!res || !res.ok){ if (msg) msg.textContent = (res && res.error) || 'Erreur — réessayez.'; return; }
+      hsCorrectionCharger();
+    })
+    .catch(function(){ if (msg) msg.textContent = 'Erreur — réessayez.'; });
+}
+
 function renderLiens(){
   var liens = STATE.liens || [];
   var srcFilter = (document.getElementById('liens-source-filter')||{}).value || '';
@@ -1329,7 +1418,8 @@ function reactiverLien(id, source){
 function renderHsAc(){
   var hs = STATE.hs.map(function(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
-      label: HS_ETAPE_LABEL[r.etape] || r.etape, type: 'Heures sup', maj: r.date_maj };
+      label: HS_ETAPE_LABEL[r.etape] || r.etape, type: 'Heures sup', maj: r.date_maj,
+      isHs: true, societeRaw: r.societe||'', nomRaw: r.nom||'', prenomRaw: r.prenom||'', periode: r.periode||'' };
   });
   var ac = STATE.acompte.map(function(r){
     return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape,
@@ -1339,9 +1429,11 @@ function renderHsAc(){
   var body = all.length ? '<div class="item-grid">' + all.map(function(r){
     var njours = joursDepuisNum(r.maj);
     var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
+    var btnCorriger = r.isHs ? '<button type="button" class="relance" style="margin-top:6px" onclick="ouvrirCorrectionHS(\'' +
+      attrSafe(r.societeRaw) + '\',\'' + attrSafe(r.nomRaw) + '\',\'' + attrSafe(r.prenomRaw) + '\',\'' + attrSafe(r.periode) + '\')">✎ Corriger les lignes</button>' : '';
     return '<div class="item-card ' + r.tag + (retard ? ' en-retard' : '') + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
       '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
-      '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(r.maj) + '</div></div>';
+      '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(r.maj) + '</div>' + btnCorriger + '</div>';
   }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
   document.getElementById('hsac-count').textContent = all.length;
