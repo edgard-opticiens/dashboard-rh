@@ -2759,7 +2759,14 @@ function loadAll(){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
-    STATE.cp = demandes.filter(function(d){ return d.statut === 'en_attente'; });
+    // 'attente_telechargement' est le statut intermediaire des demandes congés-dev une fois
+    // signees par la Direction et envoyees aux RH, en attente que la RH clique sur "Telecharger"
+    // (ce qui les fait ensuite passer en 'telecharge', cf. commentaire ci-dessous) : avant ce
+    // correctif il manquait ici ET dans l'historique ci-dessous, ce qui rendait ces demandes
+    // invisibles PARTOUT dans le dashboard — ni en attente, ni dans l'historique — tant que la RH
+    // ne les retrouvait pas par hasard via le panneau "Liens courts" (cas Morgane FILLATRE,
+    // demande du 30/10/2026, repere le 2026-10-21).
+    STATE.cp = demandes.filter(function(d){ return d.statut === 'en_attente' || d.statut === 'attente_telechargement'; });
     // 'telecharge' est le statut final des demandes congés-dev (logRHValide y met 'telecharge',
     // pas 'valide' comme congés-payés/GdO) : avant ce correctif il manquait ici, ce qui rendait
     // invisibles dans l'historique la quasi-totalite des demandes Edgard Developpement deja
