@@ -630,8 +630,8 @@ function fmtDateISO(iso){
   return d.toLocaleDateString('fr-FR');
 }
 
-var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction' };
-var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH' };
+var HS_ETAPE_LABEL = { reseau: 'Attente signature Directeur Réseau', rh1: 'Attente chiffrage RH', dir: 'Attente signature Direction', rh2: 'Terminée' };
+var AC_ETAPE_LABEL = { resp: 'Attente signature responsable', dir: 'Attente signature Direction', rh: 'Attente traitement RH', termine: 'Terminé' };
 var MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
 function periodesDisponibles(){
@@ -878,10 +878,11 @@ function ficheCollabContent(person){
     : '';
   cpHtml += cpHistoToggle + cpPasseHtml;
 
-  // Heures sup / acomptes en attente
-  var hsac = STATE.hs.filter(function(r){ return personKey(r.nom, r.prenom) === K; }).map(function(r){
+  // Heures sup / acomptes en attente — le suivi renvoie desormais aussi l'historique (termine),
+  // donc on exclut ici explicitement les lignes finalisees pour garder ce bloc "en attente" correct.
+  var hsac = STATE.hs.filter(function(r){ return personKey(r.nom, r.prenom) === K && r.etape !== 'rh2'; }).map(function(r){
     return { type: 'Heures sup', label: HS_ETAPE_LABEL[r.etape] || r.etape, maj: r.date_maj, soc: r.societe };
-  }).concat(STATE.acompte.filter(function(r){ return personKey(r.nom, r.prenom) === K; }).map(function(r){
+  }).concat(STATE.acompte.filter(function(r){ return personKey(r.nom, r.prenom) === K && r.etape !== 'termine'; }).map(function(r){
     return { type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), label: AC_ETAPE_LABEL[r.etape] || r.etape, maj: r.date_maj, soc: r.societe };
   }));
   var hsacHtml = hsac.length ? '<div class="item-grid">' + hsac.map(function(r){
@@ -1494,29 +1495,57 @@ function reactiverLien(id, source){
 }
 
 function renderHsAc(){
-  var hs = STATE.hs.map(function(r){
+  // Le suivi (heures sup + acomptes) renvoie desormais aussi les lignes finalisees (historique),
+  // avec leur lien de consultation — meme principe que le panneau CP : une vue "en attente" et une
+  // vue "historique", le badge/l'apercu du panneau replie reflete toujours le nombre en attente.
+  function mapHs(r){
     return { who: esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()), soc: esc(r.societe), tag: r.etape,
-      label: HS_ETAPE_LABEL[r.etape] || r.etape, type: 'Heures sup', maj: r.date_maj,
+      label: HS_ETAPE_LABEL[r.etape] || r.etape, type: 'Heures sup', maj: r.date_maj, lien: r.lien || '',
       isHs: true, societeRaw: r.societe||'', nomRaw: r.nom||'', prenomRaw: r.prenom||'', periode: r.periode||'' };
-  });
-  var ac = STATE.acompte.map(function(r){
-    return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape,
+  }
+  function mapAc(r){
+    return { who: esc(r.nom), soc: esc(r.societe), tag: r.etape, lien: r.lien || '',
       label: AC_ETAPE_LABEL[r.etape] || r.etape, type: 'Acompte' + (r.montant ? ' (' + esc(r.montant) + ' €)' : ''), maj: r.date_maj };
-  });
-  var all = hs.concat(ac);
-  var body = all.length ? '<div class="item-grid">' + all.map(function(r){
-    var njours = joursDepuisNum(r.maj);
-    var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
-    var btnCorriger = r.isHs ? '<button type="button" class="relance" style="margin-top:6px" onclick="ouvrirCorrectionHS(\'' +
-      attrSafe(r.societeRaw) + '\',\'' + attrSafe(r.nomRaw) + '\',\'' + attrSafe(r.prenomRaw) + '\',\'' + attrSafe(r.periode) + '\')">✎ Corriger les lignes</button>' : '';
-    return '<div class="item-card ' + r.tag + (retard ? ' en-retard' : '') + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
-      '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
-      '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(r.maj) + '</div>' + btnCorriger + '</div>';
-  }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
+  }
+  var hsPending = STATE.hs.filter(function(r){ return r.etape !== 'rh2'; }).map(mapHs);
+  var acPending = STATE.acompte.filter(function(r){ return r.etape !== 'termine'; }).map(mapAc);
+  var hsHisto = STATE.hs.filter(function(r){ return r.etape === 'rh2'; }).map(mapHs);
+  var acHisto = STATE.acompte.filter(function(r){ return r.etape === 'termine'; }).map(mapAc);
+  var pending = hsPending.concat(acPending);
+  var historique = hsHisto.concat(acHisto);
+
+  var viewEl = document.getElementById('hsac-view-select');
+  var view = viewEl ? viewEl.value : 'attente';
+  var all = view === 'historique' ? historique : pending;
+
+  var body;
+  if (view === 'historique'){
+    body = all.length ? '<div class="item-grid">' + all.map(function(r){
+      var consultBtn = r.lien ? '<a class="consult" href="' + esc(r.lien) + '" target="_blank" rel="noopener">👁️ Consulter</a>' : '';
+      return '<div class="item-card complet"><div class="top"><span class="who">' + r.who + '</span><span class="tag complet">' + esc(r.type) + '</span></div>' +
+        '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
+        '<div class="since">Terminée le ' + joursDepuis(r.maj) + '</div>' +
+        '<div class="btnrow">' + consultBtn + '</div></div>';
+    }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte terminée.</div>';
+  } else {
+    body = all.length ? '<div class="item-grid">' + all.map(function(r){
+      var njours = joursDepuisNum(r.maj);
+      var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
+      var consultBtn = r.lien ? '<a class="consult" href="' + esc(r.lien) + '" target="_blank" rel="noopener">👁️ Consulter</a>' : '';
+      var btnCorriger = r.isHs ? '<button type="button" class="relance" onclick="ouvrirCorrectionHS(\'' +
+        attrSafe(r.societeRaw) + '\',\'' + attrSafe(r.nomRaw) + '\',\'' + attrSafe(r.prenomRaw) + '\',\'' + attrSafe(r.periode) + '\')">✎ Corriger les lignes</button>' : '';
+      return '<div class="item-card ' + r.tag + (retard ? ' en-retard' : '') + '"><div class="top"><span class="who">' + r.who + '</span><span class="tag ' + r.tag + '">' + esc(r.type) + '</span></div>' +
+        '<div class="meta">' + r.soc + ' — ' + esc(r.label) + '</div>' +
+        '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(r.maj) + '</div>' +
+        '<div class="btnrow">' + consultBtn + btnCorriger + '</div></div>';
+    }).join('') + '</div>' : '<div class="empty">Aucune demande d\'heures sup ou d\'acompte en attente.</div>';
+  }
   document.getElementById('sec-hsac').querySelector('.panel-body').innerHTML = body;
-  document.getElementById('hsac-count').textContent = all.length;
-  document.getElementById('hsac-count').className = 'n' + (all.length===0 ? ' ok' : '');
-  document.getElementById('hsac-preview').innerHTML = previewHtml(all.map(function(r){
+  // Comme pour le panneau CP : le badge et l'apercu refletent toujours le nombre EN ATTENTE,
+  // quelle que soit la vue ouverte a l'interieur.
+  document.getElementById('hsac-count').textContent = pending.length;
+  document.getElementById('hsac-count').className = 'n' + (pending.length===0 ? ' ok' : '');
+  document.getElementById('hsac-preview').innerHTML = previewHtml(pending.map(function(r){
     return r.who + ' — ' + esc(r.type);
   }));
 }
@@ -1872,7 +1901,10 @@ function buildPanels(){
   P.hsac = '<div class="panel" id="sec-hsac" style="--pc:#C9A84C">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-hsac\')"><div><div class="n" id="hsac-count">0</div><div class="l">Heures sup / acomptes en attente</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="hsac-preview" onclick="togglePanel(\'sec-hsac\')"></div>' +
-      '<div class="panel-detail"><div class="panel-body"></div></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><select id="hsac-view-select" onchange="renderHsAc()"><option value="attente">En attente</option><option value="historique">Terminées (historique)</option></select></div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
     '</div>';
   P.soldes = '<div class="panel" id="sec-soldes" style="--pc:#C0392B">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-soldes\')"><div><div class="n" id="soldes-count">0</div><div class="l">Soldes CP importants (Edgard + GdO)</div></div><div class="chev">▾</div></div>' +
