@@ -745,6 +745,34 @@ function ficheTypeLabel(d){
   return d.type || 'CP';
 }
 
+/* Variante compacte de ficheTypeLabel, pour le panneau principal CP/absences (liste que la RH
+   traite au quotidien) : un badge COURT (le motif brut, pas le libelle long — sinon ca deborde
+   le badge .tag) + un detail separe (periode RTT, heures/jours) affiche sous les dates. Avant ce
+   correctif, cette liste affichait uniquement "ABS"/"CP+ABS" : la RH devait ouvrir la fiche du
+   collaborateur pour savoir si c'etait un RTT, un CSS, un evenement familial... — voir aussi
+   STATE.motifs (correction manuelle RH, prioritaire) et absEnrich (recuperation du payload). */
+var ABS_TAG_COURT = { 'RTT':'RTT', 'Evt Fam':'Évt Fam', 'Décès':'Décès', 'CSS':'CSS', 'ANR':'ANR', 'Congé révision':'Révision', 'Maladie':'Maladie', 'Autre absence':'Absence' };
+function cpListAbsInfo(d){
+  var motif = STATE.motifs[d.id] || '';
+  var detail = '';
+  if (!motif){
+    var k = absPayKey(d.lien);
+    if (!k) return null;
+    var ck = absKeyStr(k);
+    if (!(ck in ABS_PAY)) return null;
+    var p = ABS_PAY[ck], a = p && p.abs;
+    if (!a || a.on === false) return null;
+    motif = a.motif || STORE_MOTIF[a.m] || (a.mL ? String(a.mL).replace(/^[^A-Za-zÀ-ÿ]+/, '').trim() : '');
+    if (!motif) return null;
+    var bits = [];
+    if (motif === 'RTT' && a.rttPer) bits.push(a.rttPer);
+    if (a.h) bits.push(a.h + ' h');
+    if (a.j) bits.push(a.j + ' j');
+    detail = bits.join(' · ');
+  }
+  return { tag: ABS_TAG_COURT[motif] || motif, detail: detail };
+}
+
 /* Vrai s'il reste des demandes ABS dont le motif reel n'a pas encore ete recupere (payload pas
    encore en cache) — sert a ne lancer l'enrichissement qu'une fois par lot. */
 function ficheNeedsAbsEnrich(items){
@@ -904,38 +932,62 @@ function renderCP(){
 
   var filterEl = document.getElementById('cp-soc-filter');
   var currentVal = filterEl.value;
-  var socsSeen = {};
-  var socs = [];
+  // Regroupe par forme normalisee (accents/casse) : une meme societe peut arriver avec des
+  // orthographes differentes selon l'outil source (ex: "Edgard Developpement" sans accent vs
+  // "Edgard Développement" avec, respectivement 1 et 38 demandes lors de la verification du
+  // 2026-10-20) — avant ce correctif, le filtre les traitait comme deux societes distinctes et
+  // la quasi-totalite des demandes Edgard Developpement restait invisible des qu'on filtrait.
+  var socGroupes = {};
   source.forEach(function(d){
-    var s = d.societe || '';
-    if (s && !socsSeen[s]){ socsSeen[s] = true; socs.push(s); }
+    var brut = d.societe || '';
+    if (!brut) return;
+    var cle = normalizeNom(brut);
+    if (!socGroupes[cle]) socGroupes[cle] = { labels: {}, count: 0 };
+    socGroupes[cle].count++;
+    socGroupes[cle].labels[brut] = (socGroupes[cle].labels[brut] || 0) + 1;
   });
-  socs.sort();
-  filterEl.innerHTML = '<option value="">Toutes les sociétés (' + source.length + ')</option>' + socs.map(function(s){
-    var cnt = source.filter(function(d){ return d.societe === s; }).length;
-    return '<option value="' + esc(s) + '">' + esc(s) + ' (' + cnt + ')</option>';
+  function socLibelle(g){
+    var meilleur = '', meilleurN = -1;
+    Object.keys(g.labels).forEach(function(l){ if (g.labels[l] > meilleurN){ meilleurN = g.labels[l]; meilleur = l; } });
+    return meilleur;
+  }
+  var socCles = Object.keys(socGroupes).sort(function(a,b){ return socLibelle(socGroupes[a]).localeCompare(socLibelle(socGroupes[b])); });
+  filterEl.innerHTML = '<option value="">Toutes les sociétés (' + source.length + ')</option>' + socCles.map(function(c){
+    return '<option value="' + esc(c) + '">' + esc(socLibelle(socGroupes[c])) + ' (' + socGroupes[c].count + ')</option>';
   }).join('');
-  if (socs.indexOf(currentVal) !== -1) filterEl.value = currentVal;
+  if (socCles.indexOf(currentVal) !== -1) filterEl.value = currentVal;
   var activeSoc = filterEl.value;
-  var filtered = activeSoc ? source.filter(function(d){ return d.societe === activeSoc; }) : source;
+  var filtered = activeSoc ? source.filter(function(d){ return normalizeNom(d.societe) === activeSoc; }) : source;
+
+  // Recupere le vrai motif d'absence (RTT/CSS/ANR/evt familial...) pour les demandes ABS/CP+ABS
+  // de la liste : rendu immediat avec le meilleur libelle deja disponible, puis un seul passage
+  // d'enrichissement async (cache ABS_PAY) suivi d'un nouveau rendu — meme mecanisme que la fiche
+  // collaborateur, qui l'avait deja ; seule la liste principale en etait privee jusqu'ici.
+  if (ficheNeedsAbsEnrich(source)){
+    absEnrich(source).then(function(){ renderCP(); });
+  }
 
   var body;
   if (view === 'historique'){
     body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
       var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
-      var type = esc(d.type || 'CP');
+      var absInfo = /ABS/.test(String(d.type||'').toUpperCase()) ? cpListAbsInfo(d) : null;
+      var type = esc(absInfo ? (/^CP\+/i.test(String(d.type||'')) ? 'CP+' + absInfo.tag : absInfo.tag) : (d.type || 'CP'));
       var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
+      var detailBit = absInfo && absInfo.detail ? ' · ' + esc(absInfo.detail) : '';
       var consultBtn = d.lien ? '<a class="consult" href="' + esc(d.lien) + '" target="_blank" rel="noopener">👁️ Consulter</a>' : '';
       return '<div class="item-card complet" id="card-cp-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag complet">' + type + '</span></div>' +
-        '<div class="meta">' + soc + ' — ' + dates + '</div>' +
+        '<div class="meta">' + soc + ' — ' + dates + detailBit + '</div>' +
         '<div class="since">Validée le ' + fmtDate(d.date_derniere_action) + '</div>' +
         '<div class="btnrow">' + consultBtn + '</div></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune demande validée' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + '.</div>';
   } else {
     body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
       var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
-      var type = esc(d.type || 'CP');
+      var absInfo = /ABS/.test(String(d.type||'').toUpperCase()) ? cpListAbsInfo(d) : null;
+      var type = esc(absInfo ? (/^CP\+/i.test(String(d.type||'')) ? 'CP+' + absInfo.tag : absInfo.tag) : (d.type || 'CP'));
       var dates = fmtDate(d.date_debut) + (d.date_fin && d.date_fin !== d.date_debut ? ' → ' + fmtDate(d.date_fin) : '');
+      var detailBit = absInfo && absInfo.detail ? ' · ' + esc(absInfo.detail) : '';
       var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
       var relanceBtn = d.en_attente_email ? '<button type="button" class="relance" id="relance-cp-' + domId(d.id) + '" onclick="relancerCP(\'' + attrSafe(d.id) + '\')">✉️ Relancer</button>' : '';
       var deleteBtn = '<button type="button" class="delete" id="del-cp-' + domId(d.id) + '" onclick="supprimerCP(\'' + attrSafe(d.id) + '\')">🗑️ Supprimer</button>';
@@ -943,7 +995,7 @@ function renderCP(){
       var njours = joursDepuisNum(d.date_derniere_action);
       var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
       return '<div class="item-card en_attente' + (retard ? ' en-retard' : '') + '" id="card-cp-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + type + '</span></div>' +
-        '<div class="meta">' + soc + ' — ' + dates + (attente ? '<br>' + attente : '') + '</div>' +
+        '<div class="meta">' + soc + ' — ' + dates + detailBit + (attente ? '<br>' + attente : '') + '</div>' +
         '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(d.date_derniere_action) + '</div>' +
         '<div class="btnrow">' + consultBtn + relanceBtn + deleteBtn + '</div></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune demande' + (activeSoc ? ' pour ' + esc(activeSoc) : ' de CP ou d\'absence') + ' en attente.</div>';
@@ -1969,7 +2021,12 @@ function absMotifLib(m){
 }
 function absPayKey(lien){
   lien = String(lien || '');
-  var dev = /conges-payes-edgarddev/i.test(lien);
+  // 'conges-payes-edgarddev' : ancien chemin historique, conserve par securite ; le site reel
+  // (congés-dev, confirme via les liens envoyes par mail) est en /conges-dev/ — non detecte avant
+  // ce correctif, ce qui envoyait a tort les recuperations de motif d'absence Edgard Developpement
+  // vers lien-court-get (table generique) au lieu de conges-dev-payload-get, et les faisait donc
+  // systematiquement echouer (motif jamais retrouve, cf. planning directeurs et fiche collaborateur).
+  var dev = /conges-payes-edgarddev|\/conges-dev\//i.test(lien);
   var m = /[?&]id=([^&#]+)/.exec(lien);
   if (m) return { kind: 'id', v: decodeURIComponent(m[1]), dev: dev };
   m = /[?&]r=([^&#]+)/.exec(lien);
@@ -2671,7 +2728,12 @@ function loadAll(){
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
     STATE.cp = demandes.filter(function(d){ return d.statut === 'en_attente'; });
-    STATE.cpHistorique = demandes.filter(function(d){ return d.statut === 'valide'; })
+    // 'telecharge' est le statut final des demandes congés-dev (logRHValide y met 'telecharge',
+    // pas 'valide' comme congés-payés/GdO) : avant ce correctif il manquait ici, ce qui rendait
+    // invisibles dans l'historique la quasi-totalite des demandes Edgard Developpement deja
+    // traitees (37 demandes sur 38 lors de la verification du 2026-10-20, dont celle de Samuel
+    // FRANCK du 16/10 que la RH ne retrouvait pas).
+    STATE.cpHistorique = demandes.filter(function(d){ return d.statut === 'valide' || d.statut === 'telecharge'; })
       .sort(function(a,b){ return new Date(b.date_derniere_action) - new Date(a.date_derniere_action); });
 
     if (results[7] && results[7].length) STATE.dirs = results[7];
