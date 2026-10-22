@@ -523,6 +523,7 @@ var N8N_PORTAIL_STATS = 'https://edgard-opticiens.app.n8n.cloud/webhook/portail-
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
 var N8N_NDF_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/ndf-relance-manuelle';
+var N8N_NDF_SUPPRIMER = 'https://edgard-opticiens.app.n8n.cloud/webhook/ndf-supprimer-manuelle';
 var NDF_BASE_URL = 'https://edgard-opticiens.github.io/ndf/';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
 var SOLDES_FIN_PERIODE  = { y: 2027, m: 5 }; // fin de la periode CP en cours (01/06 -> 31/05) — a avancer d'un an chaque ete
@@ -1079,13 +1080,14 @@ function renderNdf(){
       var periode = esc(moisLabel(d.annee, d.mois));
       var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
       var relanceBtn = '<button type="button" class="relance" id="relance-ndf-' + domId(d.id) + '" onclick="relancerNdf(\'' + attrSafe(d.id) + '\')">✉️ Relancer</button>';
+      var deleteBtn = '<button type="button" class="delete" id="del-ndf-' + domId(d.id) + '" onclick="supprimerNdf(\'' + attrSafe(d.id) + '\')">🗑️ Supprimer</button>';
       var consultBtn = '<a class="consult" href="' + esc(NDF_BASE_URL) + '?id=' + esc(encodeURIComponent(d.id)) + '" target="_blank" rel="noopener">👁️ Consulter</a>';
       var njours = joursDepuisNum(d.date_maj);
       var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
       return '<div class="item-card en_attente' + (retard ? ' en-retard' : '') + '" id="card-ndf-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + fmtNum(d.montant) + ' €</span></div>' +
         '<div class="meta">' + soc + ' — ' + periode + ' · ' + (d.nb_lignes||0) + ' ligne' + (d.nb_lignes===1?'':'s') + (d.nb_justificatifs ? ' · ' + d.nb_justificatifs + ' justificatif' + (d.nb_justificatifs===1?'':'s') : '') + (attente ? '<br>' + attente : '') + '</div>' +
         '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(d.date_maj) + '</div>' +
-        '<div class="btnrow">' + consultBtn + relanceBtn + '</div></div>';
+        '<div class="btnrow">' + consultBtn + relanceBtn + deleteBtn + '</div></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune note de frais' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + ' en attente.</div>';
   }
   document.getElementById('sec-ndf').querySelector('.panel-body').innerHTML = body;
@@ -1377,6 +1379,32 @@ function relancerNdf(id){
     .catch(function(){
       alert("Erreur lors de l'envoi de la relance — réessayez.");
       if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+    });
+}
+
+function supprimerNdf(id){
+  var d = STATE.ndf.filter(function(x){ return x.id === id; })[0];
+  if (!d){ alert("Note de frais introuvable — actualisez le tableau et réessayez."); return; }
+  var who = (d.prenom||'') + ' ' + (d.nom||'').toUpperCase();
+  if (!confirm('Supprimer définitivement la note de frais de ' + who + ' (' + (d.societe||'') + ', ' + esc(moisLabel(d.annee, d.mois)) + ') ?\n\nCette action est irréversible — à réserver aux notes erronées (doublon, test, saisie annulée).')) return;
+  var btn = document.getElementById('del-ndf-' + domId(id));
+  if (btn){ btn.disabled = true; btn.textContent = 'Suppression…'; }
+  authFetch(N8N_NDF_SUPPRIMER, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: d.id })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        STATE.ndf = STATE.ndf.filter(function(x){ return x.id !== id; });
+        renderNdf();
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de la suppression — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '🗑️ Supprimer'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de la suppression — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '🗑️ Supprimer'; }
     });
 }
 
