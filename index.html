@@ -453,8 +453,25 @@ function authGet(){
 }
 function authSave(o){ try{ localStorage.setItem(AUTH_KEY, JSON.stringify(o)); }catch(e){} }
 function authClear(){ try{ localStorage.removeItem(AUTH_KEY); }catch(e){} }
+// Protege contre un fetch() qui reste bloque indefiniment (ex. telephone mis en veille / onglet
+// mis en arriere-plan) : sans cette limite de temps, un chargement ou une action (relance,
+// suppression, connexion...) peut rester bloque sur "Envoi..." sans jamais reussir ni echouer
+// (meme defaut corrige sur heures sup / acompte / congés / variables de paie / portails RH,
+// 2026-10-22 — ici le point d'entree unique de toutes les lectures et actions du dashboard).
+// Une tentative immediate + une reprise avant d'abandonner.
+function fetchAvecTimeoutEtRetry(url, opts, ms){
+  function essai(reste){
+    var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    var id = ctrl ? setTimeout(function(){ ctrl.abort(); }, ms) : null;
+    var finalOpts = ctrl ? Object.assign({}, opts, {signal: ctrl.signal}) : opts;
+    return fetch(url, finalOpts)
+      .finally(function(){ if (id) clearTimeout(id); })
+      .catch(function(e){ if (reste > 0) return essai(reste - 1); throw e; });
+  }
+  return essai(1);
+}
 function authPost(url, body){
-  return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+  return fetchAvecTimeoutEtRetry(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}, 12000)
     .then(function(r){ return r.json().catch(function(){ return {ok:false, error:'reponse'}; }).then(function(j){ j.httpStatus = r.status; return j; }); });
 }
 function authLogin(role, magasin, code){ return authPost(N8N_AUTH_LOGIN, {role:role, magasin:magasin, code:code}); }
@@ -475,7 +492,7 @@ function authFetch(url, opts){
   if (opts.body && typeof opts.body === 'string'){
     try{ var b = JSON.parse(opts.body); if (a) b.token = a.token; opts.body = JSON.stringify(b); }catch(e){}
   }
-  return fetch(url, opts);
+  return fetchAvecTimeoutEtRetry(url, opts, 12000);
 }
 /* Fiche d'un magasin (liste des collaborateurs du mois), lue sur le serveur */
 function rosterStore(code){
@@ -505,6 +522,8 @@ var N8N_DIRECTEURS = 'https://edgard-opticiens.app.n8n.cloud/webhook/directeurs-
 var N8N_PORTAIL_STATS = 'https://edgard-opticiens.app.n8n.cloud/webhook/portail-stats?days=190';
 var N8N_EDEV_SAISIES = 'https://edgard-opticiens.app.n8n.cloud/webhook/edev-saisies';
 var N8N_PLANNINGS = 'https://edgard-opticiens.app.n8n.cloud/webhook/plannings-apprentis-liste';
+var N8N_NDF_RELANCE = 'https://edgard-opticiens.app.n8n.cloud/webhook/ndf-relance-manuelle';
+var NDF_BASE_URL = 'https://edgard-opticiens.github.io/ndf/';
 var SOLDES_SEUIL_DEFAUT = 30; // jours — seuil par defaut pour signaler un solde important
 var SOLDES_FIN_PERIODE  = { y: 2027, m: 5 }; // fin de la periode CP en cours (01/06 -> 31/05) — a avancer d'un an chaque ete
 var VAR_PERIODE_DEBUT = '2026-07'; // premier mois suivi dans l'historique
@@ -653,7 +672,7 @@ function libellePeriode(p){
 
 /* ============================ DONNEES ============================ */
 var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
-  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [] };
+  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [] };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -1012,6 +1031,74 @@ function renderCP(){
   }));
 }
 
+function renderNdf(){
+  var viewEl = document.getElementById('ndf-view-select');
+  var view = viewEl ? viewEl.value : 'attente';
+  var source = view === 'historique' ? STATE.ndfHistorique : STATE.ndf;
+
+  var filterEl = document.getElementById('ndf-soc-filter');
+  var currentVal = filterEl.value;
+  // Meme regroupement "forme normalisee" que pour les CP (cf. renderCP) : evite qu'une societe
+  // ecrite differemment selon l'outil source n'apparaisse comme deux entrees dans le filtre.
+  var socGroupes = {};
+  source.forEach(function(d){
+    var brut = d.societe || '';
+    if (!brut) return;
+    var cle = normalizeNom(brut);
+    if (!socGroupes[cle]) socGroupes[cle] = { labels: {}, count: 0 };
+    socGroupes[cle].count++;
+    socGroupes[cle].labels[brut] = (socGroupes[cle].labels[brut] || 0) + 1;
+  });
+  function socLibelle(g){
+    var meilleur = '', meilleurN = -1;
+    Object.keys(g.labels).forEach(function(l){ if (g.labels[l] > meilleurN){ meilleurN = g.labels[l]; meilleur = l; } });
+    return meilleur;
+  }
+  var socCles = Object.keys(socGroupes).sort(function(a,b){ return socLibelle(socGroupes[a]).localeCompare(socLibelle(socGroupes[b])); });
+  filterEl.innerHTML = '<option value="">Toutes les sociétés (' + source.length + ')</option>' + socCles.map(function(c){
+    return '<option value="' + esc(c) + '">' + esc(socLibelle(socGroupes[c])) + ' (' + socGroupes[c].count + ')</option>';
+  }).join('');
+  if (socCles.indexOf(currentVal) !== -1) filterEl.value = currentVal;
+  var activeSoc = filterEl.value;
+  var filtered = activeSoc ? source.filter(function(d){ return normalizeNom(d.societe) === activeSoc; }) : source;
+
+  var body;
+  if (view === 'historique'){
+    body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
+      var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
+      var periode = esc(moisLabel(d.annee, d.mois));
+      var consultBtn = '<a class="consult" href="' + esc(NDF_BASE_URL) + '?id=' + esc(encodeURIComponent(d.id)) + '" target="_blank" rel="noopener">👁️ Consulter</a>';
+      return '<div class="item-card complet" id="card-ndf-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag complet">' + fmtNum(d.montant) + ' €</span></div>' +
+        '<div class="meta">' + soc + ' — ' + periode + ' · ' + (d.nb_lignes||0) + ' ligne' + (d.nb_lignes===1?'':'s') + '</div>' +
+        '<div class="since">Signée le ' + fmtDate(d.date_maj) + '</div>' +
+        '<div class="btnrow">' + consultBtn + '</div></div>';
+    }).join('') + '</div>' : '<div class="empty">Aucune note de frais signée' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + '.</div>';
+  } else {
+    body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
+      var soc = esc(d.societe), who = esc(d.prenom) + ' ' + esc((d.nom||'').toUpperCase());
+      var periode = esc(moisLabel(d.annee, d.mois));
+      var attente = d.en_attente_nom ? 'En attente de ' + esc(d.en_attente_nom) : '';
+      var relanceBtn = '<button type="button" class="relance" id="relance-ndf-' + domId(d.id) + '" onclick="relancerNdf(\'' + attrSafe(d.id) + '\')">✉️ Relancer</button>';
+      var consultBtn = '<a class="consult" href="' + esc(NDF_BASE_URL) + '?id=' + esc(encodeURIComponent(d.id)) + '" target="_blank" rel="noopener">👁️ Consulter</a>';
+      var njours = joursDepuisNum(d.date_maj);
+      var retard = njours !== null && njours >= SEUIL_RETARD_JOURS;
+      return '<div class="item-card en_attente' + (retard ? ' en-retard' : '') + '" id="card-ndf-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag en_attente">' + fmtNum(d.montant) + ' €</span></div>' +
+        '<div class="meta">' + soc + ' — ' + periode + ' · ' + (d.nb_lignes||0) + ' ligne' + (d.nb_lignes===1?'':'s') + (d.nb_justificatifs ? ' · ' + d.nb_justificatifs + ' justificatif' + (d.nb_justificatifs===1?'':'s') : '') + (attente ? '<br>' + attente : '') + '</div>' +
+        '<div class="since' + (retard ? ' retard' : '') + '">' + (retard ? '⚠ ' : '') + joursDepuis(d.date_maj) + '</div>' +
+        '<div class="btnrow">' + consultBtn + relanceBtn + '</div></div>';
+    }).join('') + '</div>' : '<div class="empty">Aucune note de frais' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + ' en attente.</div>';
+  }
+  document.getElementById('sec-ndf').querySelector('.panel-body').innerHTML = body;
+  // Comme pour le panneau CP : le badge et l'aperçu reflètent toujours les notes EN ATTENTE,
+  // quelle que soit la vue ouverte à l'intérieur.
+  var pending = STATE.ndf;
+  document.getElementById('ndf-count').textContent = pending.length;
+  document.getElementById('ndf-count').className = 'n' + (pending.length===0 ? ' ok' : '');
+  document.getElementById('ndf-preview').innerHTML = previewHtml(pending.map(function(d){
+    return esc(d.prenom) + ' ' + esc((d.nom||'').charAt(0).toUpperCase()) + '. — ' + esc(d.societe) + ' (' + fmtNum(d.montant) + ' €)';
+  }));
+}
+
 function renderVariables(){
   var info = STATE.variables;
   var box = document.getElementById('sec-var').querySelector('.panel-body');
@@ -1252,6 +1339,31 @@ function relancerCP(id){
       en_attente_nom: d.en_attente_nom, en_attente_email: d.en_attente_email,
       lien: d.lien, date_derniere_action: d.date_derniere_action
     })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        if (btn){ btn.textContent = '✔️ Envoyé'; }
+        setTimeout(function(){ if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; } }, 4000);
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de l'envoi de la relance — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de l'envoi de la relance — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '✉️ Relancer'; }
+    });
+}
+
+function relancerNdf(id){
+  var d = STATE.ndf.filter(function(x){ return x.id === id; })[0];
+  if (!d){ alert("Note de frais introuvable — actualisez le tableau et réessayez."); return; }
+  if (!confirm('Envoyer un e-mail de rappel à ' + (d.en_attente_nom || 'la personne en attente') + ' pour la note de frais de ' + (d.prenom||'') + ' ' + (d.nom||'') + ' ?')) return;
+  var btn = document.getElementById('relance-ndf-' + domId(id));
+  if (btn){ btn.disabled = true; btn.textContent = 'Envoi…'; }
+  authFetch(N8N_NDF_RELANCE, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: d.id })
   }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
     .then(function(res){
       if (res.ok && res.data && res.data.ok){
@@ -1906,6 +2018,14 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
+  P.ndf = '<div class="panel" id="sec-ndf" style="--pc:#27AE60">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-ndf\')"><div><div class="n" id="ndf-count">0</div><div class="l">Notes de frais en attente</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="ndf-preview" onclick="togglePanel(\'sec-ndf\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><select id="ndf-view-select" onchange="renderNdf()"><option value="attente">En attente</option><option value="historique">Signées (historique)</option></select><select id="ndf-soc-filter" onchange="renderNdf()"><option value="">Toutes les sociétés</option></select></div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>';
   P.soldes = '<div class="panel" id="sec-soldes" style="--pc:#C0392B">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-soldes\')"><div><div class="n" id="soldes-count">0</div><div class="l">Soldes CP importants (Edgard + GdO)</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="soldes-preview" onclick="togglePanel(\'sec-soldes\')"></div>' +
@@ -1990,7 +2110,7 @@ function buildPanels(){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="ve-stack">' + html + '</div></section>';
   }
   document.getElementById('panels').innerHTML =
-    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.plannings + P.liens) +
+    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens) +
     sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
@@ -2754,8 +2874,9 @@ function loadAll(){
     .then(function(r){ return r.json().catch(function(){ return { ok:false, liens: [] }; }); })
     .catch(function(){ return { ok:false, liens: [] }; });
   var pNdf = authRead('ndf').catch(function(){ return { data: [] }; });
+  var pNdfHisto = authRead('ndf', {statut:'termine'}).catch(function(){ return { data: [] }; });
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -2800,8 +2921,10 @@ function loadAll(){
 
     STATE.liens = (results[12] && results[12].liens) || [];
     STATE.ndf = (results[13] && results[13].data) || [];
+    STATE.ndfHistorique = (results[14] && results[14].data) || [];
     renderCP();
     renderHsAc();
+    renderNdf();
     renderSoldes();
     renderPlannings();
     renderLiens();
