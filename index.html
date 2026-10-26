@@ -488,14 +488,18 @@ function authRead(source, params){
     throw new Error((j && j.error) || 'lecture');
   });
 }
-/* Actions (POST) : le jeton de session est ajouté au corps de la requête */
-function authFetch(url, opts){
+/* Actions (POST) : le jeton de session est ajouté au corps de la requête.
+   ms optionnel : certaines actions (ex. correction de nom CP, qui relit/écrit
+   plusieurs feuilles Excel côté serveur) dépassent les 12s par défaut même
+   quand elles réussissent — on peut leur laisser plus de marge sans changer
+   le délai des autres actions. */
+function authFetch(url, opts, ms){
   opts = opts || {};
   var a = authGet();
   if (opts.body && typeof opts.body === 'string'){
     try{ var b = JSON.parse(opts.body); if (a) b.token = a.token; opts.body = JSON.stringify(b); }catch(e){}
   }
-  return fetchAvecTimeoutEtRetry(url, opts, 12000);
+  return fetchAvecTimeoutEtRetry(url, opts, ms || 12000);
 }
 /* Fiche d'un magasin (liste des collaborateurs du mois), lue sur le serveur */
 function rosterStore(code){
@@ -1479,7 +1483,7 @@ function validerCorrectionNomCP(id, close){
   authFetch(N8N_CP_CORRIGER_NOM, {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ id: id, nom: nom, prenom: prenom })
-  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+  }, 25000).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
     .then(function(res){
       if (res.ok && res.data && res.data.ok){
         var nouveauNom = (res.data.nom || nom), nouveauPrenom = (res.data.prenom || prenom);
