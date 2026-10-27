@@ -3143,6 +3143,7 @@ function loadAll(){
 
   // Décor ambiant discret (masqué sur mobile)
   var wrap = document.querySelector('.wrap');
+  if (wrap) { wrap.style.position = wrap.style.position || 'relative'; }
   if (wrap && actif.decor && window.matchMedia('(min-width:900px)').matches) {
     actif.decor.forEach(function(d){
       var el = document.createElement('div');
