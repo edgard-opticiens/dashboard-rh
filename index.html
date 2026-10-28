@@ -3018,6 +3018,34 @@ function indicFindGroupe(arr, g){
   return found;
 }
 function indicNum(n){ return String(n == null ? 0 : n).replace('.', ','); }
+function indicShortLabel(g){ return g === 'GDO' ? 'GDO' : g; }
+function ageMoyenBarChart(rows){
+  var bw0 = (document.getElementById('indic-body') || {}).clientWidth || 650;
+  var W = Math.max(280, Math.min(650, bw0 - 34)), H = 190, L = 34, R = 8, T = 10, B = 26;
+  var pw = W - L - R, ph = H - T - B;
+  var vals = [];
+  rows.forEach(function(r){ vals.push(r.hommes || 0, r.femmes || 0); });
+  var max = statsNice(Math.max.apply(null, vals.concat([1])));
+  var n = rows.length, slot = pw / n;
+  var g = '';
+  for (var i = 0; i <= 4; i++){
+    var y = T + ph - ph * i / 4, v = Math.round(max * i / 4 * 10) / 10;
+    g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#EFE7D6" stroke-width="1"/>' +
+         '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10.5" fill="#78705F">' + indicNum(v) + '</text>';
+  }
+  var bars = '', xl = '';
+  var barW = Math.max(6, (slot - 14) / 2);
+  rows.forEach(function(r, i){
+    var cx = L + i * slot + slot / 2;
+    var hH = (r.hommes || 0) / max * ph, fH = (r.femmes || 0) / max * ph;
+    var hx = cx - barW - 2, fx = cx + 2;
+    bars += '<rect x="' + hx + '" y="' + (T + ph - hH) + '" width="' + barW + '" height="' + hH + '" rx="2" fill="#1C1710"><title>' + esc(r.label) + ' — Hommes : ' + indicNum(r.hommes) + ' ans</title></rect>';
+    bars += '<rect x="' + fx + '" y="' + (T + ph - fH) + '" width="' + barW + '" height="' + fH + '" rx="2" fill="#D6602F"><title>' + esc(r.label) + ' — Femmes : ' + indicNum(r.femmes) + ' ans</title></rect>';
+    xl += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10.5" fill="#78705F">' + esc(r.label) + '</text>';
+  });
+  return '<div class="st-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Moyenne des âges par groupe, hommes et femmes">' + g +
+    '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ph) + '" y2="' + (T + ph) + '" stroke="#CFC5AE" stroke-width="1"/>' + bars + xl + '</svg></div>';
+}
 function renderIndicateurs(){
   var body = document.getElementById('indic-body'); if (!body) return;
   var D = STATE.indic;
@@ -3045,6 +3073,17 @@ function renderIndicateurs(){
     '<div class="st-kpi"><div class="v">' + eff.total + '</div><div class="k">Collaborateurs — ' + indicScopeLabel(g) + '</div></div>' +
     '<div class="st-kpi"><div class="v">' + indicNum(age.total) + '</div><div class="k">Âge moyen (ans)</div></div>' +
     '<div class="st-kpi"><div class="v">' + indicNum(anc) + '</div><div class="k">Ancienneté moyenne (ans)</div></div></div>';
+
+  var ageRows = ['EDGARD', 'GDO', 'SUPPORT'].map(function(gg){
+    var e = indicFindGroupe(D.ageMoyen.parGroupe, gg) || { hommes: 0, femmes: 0, total: 0 };
+    return { label: indicShortLabel(gg), hommes: e.hommes, femmes: e.femmes, total: e.total };
+  });
+  ageRows.push({ label: 'Total', hommes: D.ageMoyen.total.hommes, femmes: D.ageMoyen.total.femmes, total: D.ageMoyen.total.total });
+  var ageTable = '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Groupe</th><th>Hommes</th><th>Femmes</th><th>Total</th></tr></thead><tbody>' +
+    ageRows.map(function(r){ return '<tr><td class="who">' + esc(r.label) + '</td><td>' + indicNum(r.hommes) + '</td><td>' + indicNum(r.femmes) + '</td><td class="total">' + indicNum(r.total) + '</td></tr>'; }).join('') +
+    '</tbody></table></div>';
+  var ageCard = '<div class="st-card wide"><h4>Moyenne d\'âge (en années)</h4><div class="sub">Par groupe, hommes / femmes</div>' + ageTable + ageMoyenBarChart(ageRows) +
+    '<div class="st-leg" style="margin-top:8px"><span><span class="sw" style="background:#1C1710"></span>Hommes</span><span><span class="sw" style="background:#D6602F"></span>Femmes</span></div></div>';
 
   var totHF = eff.hommes + eff.femmes;
   var pctH = totHF ? Math.round(eff.hommes / totHF * 1000) / 10 : 0, pctF = totHF ? Math.round(eff.femmes / totHF * 1000) / 10 : 0;
@@ -3081,7 +3120,7 @@ function renderIndicateurs(){
     '<tr><td class="who">Total</td>' + annees.map(function(y){ var t = D.entreesSorties.totaux[y]; return '<td class="total">' + t.entrees + '</td><td class="total">' + t.sorties + '</td>'; }).join('') + '</tr>' +
     '</tbody></table></div></div>';
 
-  body.innerHTML = kpis + '<div class="st-grid">' + hfCard + pyrCard + ctrCard + dipCard + '</div>' + effTable + esTable;
+  body.innerHTML = kpis + '<div class="st-grid">' + ageCard + hfCard + pyrCard + ctrCard + dipCard + '</div>' + effTable + esTable;
 }
 
 function loadAll(){
