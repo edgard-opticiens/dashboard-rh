@@ -733,7 +733,7 @@ function libellePeriode(p){
 
 /* ============================ DONNEES ============================ */
 var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
-  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [] };
+  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [], indic: null };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -2220,6 +2220,15 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
+  P.indic = '<div class="panel" id="sec-indic" style="--pc:#178F7B">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-indic\')"><div><div class="n" id="indic-count">0</div><div class="l">Effectifs &amp; indicateurs RH</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="indic-preview" onclick="togglePanel(\'sec-indic\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><span class="tb-label">Périmètre :</span><select id="indic-groupe-filter" onchange="renderIndicateurs()"><option value="">Groupe (Edgard + GdO + Support)</option><option value="EDGARD">Edgard</option><option value="GDO">Générale d\'Optique (GdO)</option><option value="SUPPORT">Support</option></select></div>' +
+        '<div class="panel-note">Effectifs, pyramide des âges, contrats, diplômes et ancienneté calculés en direct depuis le fichier Etat collaborateurs à chaque chargement du dashboard. Entrées/sorties calculées depuis Etat collaborateurs + Archives (mises à jour dès qu\'une sortie y est archivée).</div>' +
+        '<div class="panel-body" id="indic-body"></div>' +
+      '</div>' +
+    '</div>';
   P.stats = '<div class="panel" id="sec-stats" style="--pc:#A97A2E">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-stats\')"><div><div class="n" id="stats-count">…</div><div class="l">Visites du portail RH (30 derniers jours)</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="stats-preview" onclick="togglePanel(\'sec-stats\')"></div>' +
@@ -2259,7 +2268,7 @@ function buildPanels(){
   }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.stats) +
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
 }
@@ -2996,6 +3005,85 @@ function renderStats(){
   statsBindTip(days, vals);
 }
 
+/* ============================ INDICATEURS RH GENERAUX (live) ============================ */
+function indicLoad(){
+  return authRead('indicateurs').catch(function(){ return null; });
+}
+function indicScopeLabel(g){
+  return g === 'EDGARD' ? 'Edgard' : (g === 'GDO' ? 'Générale d\'Optique (GdO)' : (g === 'SUPPORT' ? 'Support' : 'Groupe (Edgard + GdO + Support)'));
+}
+function indicFindGroupe(arr, g){
+  var found = null;
+  (arr || []).forEach(function(e){ if (e.groupe === g) found = e; });
+  return found;
+}
+function indicNum(n){ return String(n == null ? 0 : n).replace('.', ','); }
+function renderIndicateurs(){
+  var body = document.getElementById('indic-body'); if (!body) return;
+  var D = STATE.indic;
+  var cnt = document.getElementById('indic-count');
+  var prv = document.getElementById('indic-preview');
+  if (!D){
+    if (cnt) cnt.textContent = '–';
+    if (prv) prv.innerHTML = '<div class="pv-item" style="color:#bbb">Indicateurs indisponibles</div>';
+    body.innerHTML = '<div class="empty">Impossible de charger les indicateurs. Réessayez dans un instant (bouton Actualiser).</div>';
+    return;
+  }
+  var g = (document.getElementById('indic-groupe-filter') || {}).value || '';
+
+  var eff = g ? indicFindGroupe(D.effectifs.parGroupe, g) : D.effectifs.total;
+  if (!eff) eff = { hommes: 0, femmes: 0, total: 0 };
+  var age = (g ? indicFindGroupe(D.ageMoyen.parGroupe, g) : D.ageMoyen.total) || { total: 0 };
+  var anc = g ? ((indicFindGroupe(D.anciennete.parGroupe, g) || {}).moyenneAnnees) : D.anciennete.totalAnnees;
+  var ctr = (g ? indicFindGroupe(D.contrats.parGroupe, g) : D.contrats.total) || { cdi:0, cdd:0, ctPro:0, ctAppr:0, total:0 };
+  var pyr = (g ? (indicFindGroupe(D.pyramideAgesParGroupe, g) || {}).bandes : D.pyramideAges) || [];
+
+  cnt.textContent = D.effectifs.total.total;
+  prv.innerHTML = '<div class="pv-item">' + D.effectifs.total.total + ' collaborateurs · âge moyen ' + indicNum(D.ageMoyen.total.total) + ' ans</div>';
+
+  var kpis = '<div class="st-kpis">' +
+    '<div class="st-kpi"><div class="v">' + eff.total + '</div><div class="k">Collaborateurs — ' + indicScopeLabel(g) + '</div></div>' +
+    '<div class="st-kpi"><div class="v">' + indicNum(age.total) + '</div><div class="k">Âge moyen (ans)</div></div>' +
+    '<div class="st-kpi"><div class="v">' + indicNum(anc) + '</div><div class="k">Ancienneté moyenne (ans)</div></div></div>';
+
+  var totHF = eff.hommes + eff.femmes;
+  var pctH = totHF ? Math.round(eff.hommes / totHF * 1000) / 10 : 0, pctF = totHF ? Math.round(eff.femmes / totHF * 1000) / 10 : 0;
+  var hfCard = '<div class="st-card"><h4>Répartition hommes / femmes</h4><div class="sub">' + indicScopeLabel(g) + '</div>' +
+    (totHF ? '<div class="st-dev" role="img" aria-label="Répartition hommes femmes">' +
+      (eff.hommes ? '<i style="background:#1C1710;width:' + pctH + '%" title="Hommes : ' + eff.hommes + '"></i>' : '') +
+      (eff.femmes ? '<i style="background:#D6602F;width:' + pctF + '%" title="Femmes : ' + eff.femmes + '"></i>' : '') +
+      '</div><div class="st-leg"><span><span class="sw" style="background:#1C1710"></span>Hommes — <b>' + pctH + ' %</b> (' + eff.hommes + ')</span><span><span class="sw" style="background:#D6602F"></span>Femmes — <b>' + pctF + ' %</b> (' + eff.femmes + ')</span></div>' : '<div class="st-empty">Aucune donnée.</div>') + '</div>';
+
+  var pyrEntries = pyr.map(function(b){ return [b.tranche, b.effectif]; });
+  var pyrMax = pyrEntries.length ? Math.max.apply(null, pyrEntries.map(function(e){ return e[1]; })) : 0;
+  var pyrCard = '<div class="st-card"><h4>Pyramide des âges</h4><div class="sub">' + indicScopeLabel(g) + '</div>' + statsHBars(pyrEntries, pyrMax) + '</div>';
+
+  var ctrEntries = [['CDI', ctr.cdi], ['CDD', ctr.cdd], ['CT Pro', ctr.ctPro], ['CT Appr.', ctr.ctAppr]];
+  var ctrCard = '<div class="st-card"><h4>Répartition par type de contrat</h4><div class="sub">' + indicScopeLabel(g) + ' · ' + ctr.total + ' contrats</div>' + statsHBars(ctrEntries, ctr.total) + '</div>';
+
+  var dipEntries = (D.diplomesBtsOl.parGroupe || []).map(function(d){ return [indicScopeLabel(d.groupe), d.pctBtsOl]; });
+  var dipCard = '<div class="st-card"><h4>% de diplômés BTS OL</h4><div class="sub">Par groupe (sur 100 %)</div>' + statsHBars(dipEntries, 100) + '</div>';
+
+  var effRows = D.effectifs.parSociete.filter(function(s){ return !g || s.groupe === g; });
+  var effTable = '<div class="st-card wide"><h4>Effectifs par magasin</h4><div class="sub">' + indicScopeLabel(g) + '</div>' +
+    '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Magasin</th><th>Groupe</th><th>Hommes</th><th>Femmes</th><th>Total</th></tr></thead><tbody>' +
+    effRows.map(function(s){ return '<tr><td class="who">' + esc(s.societe) + '</td><td>' + esc(indicScopeLabel(s.groupe)) + '</td><td>' + s.hommes + '</td><td>' + s.femmes + '</td><td class="total">' + s.total + '</td></tr>'; }).join('') +
+    '</tbody></table></div></div>';
+
+  var annees = D.entreesSorties.annees;
+  var esRows = D.entreesSorties.parSociete.filter(function(s){ return !g || s.groupe === g; });
+  var esHead = '<th>Magasin</th>' + annees.map(function(y){ return '<th>Entrées ' + y + '</th><th>Sorties ' + y + '</th>'; }).join('');
+  var esTable = '<div class="st-card wide"><h4>Entrées / sorties par année</h4><div class="sub">' + indicScopeLabel(g) + ' · 3 dernières années (glissant), ' + (annees[annees.length-1]) + ' en cours</div>' +
+    '<div class="soldes-wrap"><table class="soldes-table"><thead><tr>' + esHead + '</tr></thead><tbody>' +
+    esRows.map(function(s){
+      return '<tr><td class="who">' + esc(s.societe) + '</td>' + annees.map(function(y){ return '<td class="poses">' + s.annees[y].entrees + '</td><td>' + s.annees[y].sorties + '</td>'; }).join('') + '</tr>';
+    }).join('') +
+    '<tr><td class="who">Total</td>' + annees.map(function(y){ var t = D.entreesSorties.totaux[y]; return '<td class="total">' + t.entrees + '</td><td class="total">' + t.sorties + '</td>'; }).join('') + '</tr>' +
+    '</tbody></table></div></div>';
+
+  body.innerHTML = kpis + '<div class="st-grid">' + hfCard + pyrCard + ctrCard + dipCard + '</div>' + effTable + esTable;
+}
+
 function loadAll(){
   document.getElementById('lastUpdate').textContent = 'Chargement...';
   buildPanels();
@@ -3023,8 +3111,9 @@ function loadAll(){
     .catch(function(){ return { ok:false, liens: [] }; });
   var pNdf = authRead('ndf').catch(function(){ return { data: [] }; });
   var pNdfHisto = authRead('ndf', {statut:'termine'}).catch(function(){ return { data: [] }; });
+  var pIndic = indicLoad();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto, pIndic]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -3084,6 +3173,8 @@ function loadAll(){
     STATE.nouveaux = results[11] || [];
     renderAnniversaires();
     renderNouveaux();
+    STATE.indic = results[15] || null;
+    renderIndicateurs();
     refreshFicheCollabIfActive();
     Promise.all([edevEnrich(), dirsEnrich()]).then(function(){ absRebuildAll(); absRenderAll(); });
 
