@@ -733,7 +733,7 @@ function libellePeriode(p){
 
 /* ============================ DONNEES ============================ */
 var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
-  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [], indic: null };
+  anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [], indic: null, suivi: null };
 var VAR_PERIODE = null;
 
 function togglePanel(id){
@@ -2229,6 +2229,14 @@ function buildPanels(){
         '<div class="panel-body" id="indic-body"></div>' +
       '</div>' +
     '</div>';
+  P.suivi = '<div class="panel" id="sec-suivi" style="--pc:#2E5C6E">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-suivi\')"><div><div class="n" id="suivi-count">0</div><div class="l">Suivi du personnel — mouvements</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="suivi-preview" onclick="togglePanel(\'sec-suivi\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-note">Entrées et sorties (salariés et apprentis) et changements de poste/magasin, lus en direct depuis le fichier « Suivi du personnel ».</div>' +
+        '<div class="panel-body"></div>' +
+      '</div>' +
+    '</div>';
   P.stats = '<div class="panel" id="sec-stats" style="--pc:#A97A2E">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-stats\')"><div><div class="n" id="stats-count">…</div><div class="l">Visites du portail RH (30 derniers jours)</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="stats-preview" onclick="togglePanel(\'sec-stats\')"></div>' +
@@ -2268,7 +2276,7 @@ function buildPanels(){
   }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.stats) +
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux, suivi du personnel et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.suivi + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
 }
@@ -2704,6 +2712,7 @@ function renderEdev(){
 
 /* ============================ PLANNING DIRECTEURS (Edgard + GdO) ============================ */
 var DIRS_CUR = null, DIRS_SEL = null, DIRS_ENS = 'all', DIRS_ONLY = false;
+var SUIVI_TYPE = '', SUIVI_SEARCH = '', SUIVI_PERIODE = '90';
 var N_JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 
 function dirsParseName(full){
@@ -3123,6 +3132,90 @@ function renderIndicateurs(){
   body.innerHTML = kpis + '<div class="st-grid">' + ageCard + hfCard + pyrCard + ctrCard + dipCard + '</div>' + effTable + esTable;
 }
 
+/* ============================ SUIVI DU PERSONNEL (mouvements, live) ============================ */
+function suiviLoad(){
+  return authRead('suivi_personnel').catch(function(){ return null; });
+}
+function suiviSetType(v){ SUIVI_TYPE = v; renderSuiviPersonnel(); }
+function suiviSetSearch(v){ SUIVI_SEARCH = v; renderSuiviPersonnel(); }
+function suiviSetPeriode(v){ SUIVI_PERIODE = v; renderSuiviPersonnel(); }
+function suiviTypeLabel(t){
+  return t === 'entree_salarie' ? 'Entrée salarié(e)' : t === 'entree_apprenti' ? 'Entrée apprenti(e)' :
+    t === 'sortie_salarie' ? 'Sortie salarié(e)' : t === 'sortie_apprenti' ? 'Sortie apprenti(e)' : 'Changement poste/magasin';
+}
+function suiviTagClass(t){
+  return (t === 'entree_salarie' || t === 'entree_apprenti') ? 'complet' : (t === 'sortie_salarie' || t === 'sortie_apprenti') ? 'non_envoye' : 'en_attente';
+}
+function suiviFmtDate(iso){
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+function suiviMatches(m){
+  if (SUIVI_TYPE && m.type !== SUIVI_TYPE) return false;
+  if (SUIVI_SEARCH){
+    var q = SUIVI_SEARCH.toLowerCase();
+    var hay = (m.nom + ' ' + m.entite + ' ' + m.commentaire).toLowerCase();
+    if (hay.indexOf(q) === -1) return false;
+  }
+  return true;
+}
+function suiviRowHtml(m){
+  return '<tr><td class="who">' + suiviFmtDate(m.date) + '</td><td>' + esc(m.entite) + '</td><td>' + esc(m.nom) + '</td>' +
+    '<td><span class="tag ' + suiviTagClass(m.type) + '">' + esc(suiviTypeLabel(m.type)) + '</span></td>' +
+    '<td style="white-space:normal;max-width:320px">' + esc(m.commentaire || (m.diplome ? ('Diplôme : ' + m.diplome) : '') || (m.sdc ? 'SDC à faire' : '')) + '</td></tr>';
+}
+function renderSuiviPersonnel(){
+  var panel = document.getElementById('sec-suivi'); if (!panel) return;
+  var body = panel.querySelector('.panel-body');
+  var D = STATE.suivi;
+  var cnt = document.getElementById('suivi-count');
+  var prv = document.getElementById('suivi-preview');
+  if (!D){
+    if (cnt) cnt.textContent = '–';
+    if (prv) prv.innerHTML = '<div class="pv-item" style="color:#bbb">Suivi du personnel indisponible</div>';
+    body.innerHTML = '<div class="empty">Impossible de charger le suivi du personnel. Réessayez dans un instant (bouton Actualiser).</div>';
+    return;
+  }
+  var upcomingAll = D.upcoming || [], recentAll = D.recent || [];
+  cnt.textContent = upcomingAll.length;
+  var pv = upcomingAll.slice(0, 2).map(function(m){ return '<div class="pv-item">' + suiviFmtDate(m.date) + ' — ' + esc(m.nom) + ' (' + esc(suiviTypeLabel(m.type)) + ')</div>'; }).join('');
+  if (upcomingAll.length > 2) pv += '<div class="pv-more">+ ' + (upcomingAll.length - 2) + ' autre' + (upcomingAll.length - 2 > 1 ? 's' : '') + '</div>';
+  prv.innerHTML = pv || '<div class="pv-item" style="color:#bbb">Aucun mouvement à venir</div>';
+
+  var periodeDays = SUIVI_PERIODE === 'tout' ? null : Number(SUIVI_PERIODE);
+  var limiteRecent = null;
+  if (periodeDays){ var d0 = new Date(); d0.setDate(d0.getDate() - periodeDays); limiteRecent = d0.toISOString().slice(0, 10); }
+
+  var upcomingF = upcomingAll.filter(suiviMatches);
+  var recentF = recentAll.filter(suiviMatches).filter(function(m){ return !limiteRecent || m.date >= limiteRecent; });
+
+  var kpis = '<div class="st-kpis">' +
+    '<div class="st-kpi"><div class="v">' + upcomingAll.length + '</div><div class="k">Mouvements à venir</div></div>' +
+    '<div class="st-kpi"><div class="v">' + recentF.length + '</div><div class="k">Récents — ' + (periodeDays ? ('' + periodeDays + ' derniers jours') : 'tout l\'historique') + '</div></div>' +
+    '<div class="st-kpi"><div class="v">' + (D.counts ? D.counts.total : (upcomingAll.length + recentAll.length)) + '</div><div class="k">Total enregistré</div></div></div>';
+
+  var typePills = [['', 'Tous'], ['entree_salarie', 'Entrées salariés'], ['entree_apprenti', 'Entrées apprentis'], ['sortie_salarie', 'Sorties salariés'], ['sortie_apprenti', 'Sorties apprentis'], ['changement', 'Changements poste/magasin']]
+    .map(function(p){ return '<button class="pill' + (SUIVI_TYPE === p[0] ? ' on' : '') + '" onclick="suiviSetType(\'' + p[0] + '\')">' + p[1] + '</button>'; }).join('');
+  var periodePills = [['30', '30 jours'], ['90', '90 jours'], ['365', '1 an'], ['tout', 'Tout l\'historique']]
+    .map(function(p){ return '<button class="pill' + (SUIVI_PERIODE === p[0] ? ' on' : '') + '" onclick="suiviSetPeriode(\'' + p[0] + '\')">' + p[1] + '</button>'; }).join('');
+
+  var head = '<thead><tr><th>Date</th><th>Magasin</th><th>Nom</th><th>Mouvement</th><th>Commentaire</th></tr></thead>';
+
+  var upcomingTable = '<div class="st-card wide"><h4>À venir</h4><div class="sub">' + upcomingF.length + ' mouvement' + (upcomingF.length > 1 ? 's' : '') + '</div>' +
+    (upcomingF.length ? '<div class="soldes-wrap"><table class="soldes-table">' + head + '<tbody>' + upcomingF.map(suiviRowHtml).join('') + '</tbody></table></div>' :
+      '<div class="st-empty">Aucun mouvement à venir pour ce filtre.</div>') + '</div>';
+
+  var recentTable = '<div class="st-card wide"><h4>Mouvements récents</h4><div class="sub">' + recentF.length + ' mouvement' + (recentF.length > 1 ? 's' : '') + ' · ' + (periodeDays ? ('sur ' + periodeDays + ' jours') : 'tout l\'historique') + '<span style="float:right">' + periodePills + '</span></div>' +
+    (recentF.length ? '<div class="soldes-wrap"><table class="soldes-table">' + head + '<tbody>' + recentF.map(suiviRowHtml).join('') + '</tbody></table></div>' :
+      '<div class="st-empty">Aucun mouvement récent pour ce filtre.</div>') + '</div>';
+
+  body.innerHTML = kpis +
+    '<div class="dfilters">' + typePills + '</div>' +
+    '<div class="panel-toolbar"><input type="text" value="' + attrSafe(SUIVI_SEARCH) + '" oninput="suiviSetSearch(this.value)" placeholder="Rechercher un nom ou un magasin..." style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px;font-family:inherit;font-size:13px"></div>' +
+    upcomingTable + recentTable;
+}
+
 function loadAll(){
   document.getElementById('lastUpdate').textContent = 'Chargement...';
   buildPanels();
@@ -3151,8 +3244,9 @@ function loadAll(){
   var pNdf = authRead('ndf').catch(function(){ return { data: [] }; });
   var pNdfHisto = authRead('ndf', {statut:'termine'}).catch(function(){ return { data: [] }; });
   var pIndic = indicLoad();
+  var pSuivi = suiviLoad();
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto, pIndic]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto, pIndic, pSuivi]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -3214,6 +3308,8 @@ function loadAll(){
     renderNouveaux();
     STATE.indic = results[15] || null;
     renderIndicateurs();
+    STATE.suivi = results[16] || null;
+    renderSuiviPersonnel();
     refreshFicheCollabIfActive();
     Promise.all([edevEnrich(), dirsEnrich()]).then(function(){ absRebuildAll(); absRenderAll(); });
 
