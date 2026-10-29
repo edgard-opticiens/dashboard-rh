@@ -2237,6 +2237,19 @@ function buildPanels(){
         '<div class="panel-body"></div>' +
       '</div>' +
     '</div>';
+  P.samedis = '<div class="panel" id="sec-samedis" style="--pc:#B8650B">' +
+      '<div class="panel-face" onclick="togglePanel(\'sec-samedis\')"><div><div class="n" id="samedis-count">0</div><div class="l">Samedis tournants — récap</div></div><div class="chev">▾</div></div>' +
+      '<div class="panel-preview" id="samedis-preview" onclick="togglePanel(\'sec-samedis\')"></div>' +
+      '<div class="panel-detail">' +
+        '<div class="panel-note">Récapitulatif des samedis tournants saisis par les directeurs dans leur outil (date du samedi travaillé et de la journée de repos prise en échange).</div>' +
+        '<div class="panel-toolbar"><select id="samedis-vue" onchange="renderSamedis()"><option value="mois">Par mois</option><option value="annee">Par année</option><option value="collab">Par collaborateur</option></select>' +
+        '<select id="samedis-soc-filter" onchange="renderSamedis()"><option value="">Tous les magasins</option></select>' +
+        '<input type="month" id="samedis-mois-filter" onchange="renderSamedis()">' +
+        '<input type="number" id="samedis-annee-filter" min="2026" max="2035" style="width:70px" onchange="renderSamedis()">' +
+        '<input type="text" id="samedis-search" placeholder="Rechercher un collaborateur..." oninput="renderSamedis()"></div>' +
+        '<div class="panel-body" id="samedis-body"></div>' +
+      '</div>' +
+    '</div>';
   P.stats = '<div class="panel" id="sec-stats" style="--pc:#A97A2E">' +
       '<div class="panel-face" onclick="togglePanel(\'sec-stats\')"><div><div class="n" id="stats-count">…</div><div class="l">Visites du portail RH (30 derniers jours)</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="stats-preview" onclick="togglePanel(\'sec-stats\')"></div>' +
@@ -2276,7 +2289,7 @@ function buildPanels(){
   }
   document.getElementById('panels').innerHTML =
     sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux, suivi du personnel et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.suivi + P.stats) +
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux, suivi du personnel et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.suivi + P.samedis + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
 }
@@ -3216,6 +3229,67 @@ function renderSuiviPersonnel(){
     upcomingTable + recentTable;
 }
 
+function renderSamedis(){
+  var panel = document.getElementById('sec-samedis');
+  if (!panel) return;
+
+  var data = STATE.samedis || [];
+  document.getElementById('samedis-count').textContent = data.length;
+
+  var socFilterEl = document.getElementById('samedis-soc-filter');
+  var curSoc = socFilterEl.value;
+  var socs = {};
+  data.forEach(function(r){ if (r.societe) socs[r.societe] = (socs[r.societe]||0) + 1; });
+  var socKeys = Object.keys(socs).sort();
+  socFilterEl.innerHTML = '<option value="">Tous les magasins (' + data.length + ')</option>' + socKeys.map(function(s){ return '<option value="' + esc(s) + '">' + esc(s) + ' (' + socs[s] + ')</option>'; }).join('');
+  if (socKeys.indexOf(curSoc) !== -1) socFilterEl.value = curSoc;
+  var activeSoc = socFilterEl.value;
+
+  var vue = document.getElementById('samedis-vue').value;
+  document.getElementById('samedis-mois-filter').style.display = (vue === 'mois') ? '' : 'none';
+  document.getElementById('samedis-annee-filter').style.display = (vue === 'annee') ? '' : 'none';
+  document.getElementById('samedis-search').style.display = (vue === 'collab') ? '' : 'none';
+
+  var filtered = activeSoc ? data.filter(function(r){ return r.societe === activeSoc; }) : data;
+  var fmtJ = function(d){ return d && d.length === 10 ? (d.slice(8,10) + '/' + d.slice(5,7) + '/' + d.slice(0,4)) : (d || ''); };
+  var body = '';
+  if (vue === 'mois'){
+    var moisEl = document.getElementById('samedis-mois-filter');
+    if (!moisEl.value) { var dNow = new Date(); moisEl.value = dNow.getFullYear() + '-' + String(dNow.getMonth()+1).padStart(2,'0'); }
+    var ym = moisEl.value;
+    var rows = filtered.filter(function(r){ return r.date_samedi && r.date_samedi.slice(0,7) === ym; })
+      .sort(function(a,b){ return a.societe.localeCompare(b.societe) || a.nom.localeCompare(b.nom) || a.date_samedi.localeCompare(b.date_samedi); });
+    body = rows.length ? '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Magasin</th><th>Collaborateur</th><th>Samedi travaillé</th><th>Repos pris en échange</th><th>Commentaire</th></tr></thead><tbody>' +
+      rows.map(function(r){
+        return '<tr><td>' + esc(r.societe) + '</td><td class="who">' + esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()) + '</td><td>' + fmtJ(r.date_samedi) + '</td><td>' + fmtJ(r.date_repos) + '</td><td>' + esc(r.commentaire || '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="empty">Aucune donnée pour ce mois.</div>';
+  } else if (vue === 'annee'){
+    var anEl = document.getElementById('samedis-annee-filter');
+    if (!anEl.value) anEl.value = new Date().getFullYear();
+    var annee = anEl.value;
+    var rows2 = filtered.filter(function(r){ return r.date_samedi && r.date_samedi.slice(0,4) === String(annee); });
+    var agg = {};
+    rows2.forEach(function(r){
+      var k = r.societe + '|' + r.nom + '|' + r.prenom;
+      if (!agg[k]) agg[k] = { societe: r.societe, nom: r.nom, prenom: r.prenom, n: 0 };
+      agg[k].n++;
+    });
+    var list = Object.keys(agg).map(function(k){ return agg[k]; }).sort(function(a,b){ return a.societe.localeCompare(b.societe) || a.nom.localeCompare(b.nom); });
+    body = list.length ? '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Magasin</th><th>Collaborateur</th><th>Samedis tournants effectués</th></tr></thead><tbody>' +
+      list.map(function(a){ return '<tr><td>' + esc(a.societe) + '</td><td class="who">' + esc(a.prenom) + ' ' + esc((a.nom||'').toUpperCase()) + '</td><td>' + a.n + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' : '<div class="empty">Aucune donnée pour ' + esc(String(annee)) + '.</div>';
+  } else {
+    var searchEl = document.getElementById('samedis-search');
+    var q = normalizeNom(searchEl.value || '');
+    var rows3 = q ? filtered.filter(function(r){ return normalizeNom(r.nom + ' ' + r.prenom).indexOf(q) !== -1; }) : [];
+    rows3.sort(function(a,b){ return (a.date_samedi||'').localeCompare(b.date_samedi||''); });
+    body = !q ? '<div class="empty">Tapez un nom pour chercher.</div>' : (rows3.length ? '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Samedi travaillé</th><th>Repos pris en échange</th><th>Magasin</th><th>Collaborateur</th><th>Commentaire</th></tr></thead><tbody>' +
+      rows3.map(function(r){ return '<tr><td>' + fmtJ(r.date_samedi) + '</td><td>' + fmtJ(r.date_repos) + '</td><td>' + esc(r.societe) + '</td><td class="who">' + esc(r.prenom) + ' ' + esc((r.nom||'').toUpperCase()) + '</td><td>' + esc(r.commentaire || '') + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' : '<div class="empty">Aucun résultat pour "' + esc(searchEl.value) + '".</div>');
+  }
+  document.getElementById('samedis-body').innerHTML = body;
+  document.getElementById('samedis-preview').innerHTML = data.length ? ('<div class="pv-item">' + data.length + ' entrée' + (data.length===1?'':'s') + ' saisie' + (data.length===1?'':'s') + ' par les directeurs</div>') : '<div class="pv-item" style="color:#bbb">Aucune donnée saisie</div>';
+}
 function loadAll(){
   document.getElementById('lastUpdate').textContent = 'Chargement...';
   buildPanels();
@@ -3245,8 +3319,9 @@ function loadAll(){
   var pNdfHisto = authRead('ndf', {statut:'termine'}).catch(function(){ return { data: [] }; });
   var pIndic = indicLoad();
   var pSuivi = suiviLoad();
+  var pSamedis = authRead('samedis').catch(function(){ return { data: [] }; });
 
-  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto, pIndic, pSuivi]).then(function(results){
+  Promise.all([pCP, pHS, pAC, pSoldes, pPlannings, pVar, pEdevManuel, pDirs, pMotifs, pStats, pAnniv, pNouv, pLiens, pNdf, pNdfHisto, pIndic, pSuivi, pSamedis]).then(function(results){
     var demandesRaw = Array.isArray(results[0]) ? results[0] : (results[0].data || []);
     var archiveRaw  = Array.isArray(results[0]) ? [] : (results[0].archive || []);
     var demandes = dedupeLatest(demandesRaw.concat(archiveRaw));
@@ -3310,6 +3385,8 @@ function loadAll(){
     renderIndicateurs();
     STATE.suivi = results[16] || null;
     renderSuiviPersonnel();
+    STATE.samedis = (results[17] && results[17].data) || [];
+    renderSamedis();
     refreshFicheCollabIfActive();
     Promise.all([edevEnrich(), dirsEnrich()]).then(function(){ absRebuildAll(); absRenderAll(); });
 
