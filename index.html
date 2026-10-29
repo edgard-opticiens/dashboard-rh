@@ -3420,7 +3420,7 @@ function loadAll(){
     .then(function(r){ return r.json().catch(function(){ return { ok:false, liens: [] }; }); })
     .catch(function(){ return { ok:false, liens: [] }; });
   var pNdf = authRead('ndf').catch(function(){ return { data: [] }; });
-  var pNdfHisto = authRead('ndf', {statut:'termine'}).catch(function(){ return { data: [] }; });
+  var pNdfHisto = authRead('ndf_histo').catch(function(){ return { data: [] }; });
   var pIndic = indicLoad();
   var pSuivi = suiviLoad();
   var pSamedis = authRead('samedis').catch(function(){ return { data: [] }; });
