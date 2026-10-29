@@ -387,7 +387,14 @@ table.dgrid{border-collapse:separate;border-spacing:0;font-size:11px;width:100%}
 .st-chart svg{display:block;width:100%;height:auto}
 .st-tip{position:absolute;pointer-events:none;background:var(--dk);color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;white-space:nowrap;transform:translate(-50%,-110%);display:none;z-index:5}
 .st-zero{font-size:12px;color:var(--md);margin-top:10px;line-height:1.5}
-@media(max-width:760px){.st-kpis{grid-template-columns:1fr}.st-grid{grid-template-columns:1fr}.st-hbar{grid-template-columns:minmax(80px,45%) 1fr auto}}
+.bs-head{margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--pc)}
+.bs-head h3{font-family:'Fraunces',serif;font-size:21px;font-weight:600;color:var(--dk);margin:0 0 3px}
+.bs-sub{font-size:12.5px;color:var(--md)}
+.bs-kpis{grid-template-columns:repeat(4,1fr)}
+.bs-sec{display:flex;align-items:center;gap:9px;font-family:'Fraunces',serif;font-size:14.5px;font-weight:600;color:var(--dk);margin:22px 0 10px;letter-spacing:.01em}
+.bs-sec-n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--pc);color:#fff;font-size:11px;font-family:'Inter',sans-serif;font-weight:700;flex:none}
+.bs-donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+@media(max-width:760px){.st-kpis{grid-template-columns:1fr}.bs-kpis{grid-template-columns:1fr 1fr}.st-grid{grid-template-columns:1fr}.st-hbar{grid-template-columns:minmax(80px,45%) 1fr auto}}
 #sec-stats .panel-toolbar{flex-wrap:wrap;gap:6px 0;justify-content:flex-end}
 </style>
 </head>
@@ -2288,8 +2295,8 @@ function buildPanels(){
     return '<section class="dash-sec"><div class="sec-head"><div><div class="eb">' + num + '</div><h2>' + title + '</h2></div><p>' + desc + '</p></div><div class="ve-stack">' + html + '</div></section>';
   }
   document.getElementById('panels').innerHTML =
-    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens) +
-    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux, suivi du personnel et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.suivi + P.samedis + P.stats) +
+    sec('Partie 1', 'RH', 'Congés et absences, variables de paie, heures supplémentaires et acomptes, notes de frais, plannings des apprentis, liens courts, samedis tournants.', P.cp + P.var + P.hsac + P.ndf + P.plannings + P.liens + P.samedis) +
+    sec('Partie 2', 'Informations diverses', 'Soldes de congés, planning d\'Edgard Développement, planning consolidé des directeurs, indicateurs RH généraux, suivi du personnel et statistiques d\'utilisation du portail RH.', P.soldes + P.edev + P.dirs + P.indic + P.suivi + P.stats) +
     secLibre('Partie 3', 'Vie d\'équipe', 'Anniversaires à venir, arrivées récentes et trombinoscope par magasin.', P.anniv + P.nouveaux + P.trombino);
   renderTrombino();
 }
@@ -2916,11 +2923,14 @@ function statsDelta(cur, prev){
   var pct = Math.round((cur - prev) / prev * 100);
   return (pct >= 0 ? '▲ +' : '▼ ') + pct + ' % <span>vs période précédente (' + prev + ')</span>';
 }
-function statsHBars(entries, max){
+function statsHBars(entries, max, opts){
   if (!entries.length) return '<div class="st-empty">Aucune donnée sur la période.</div>';
-  return entries.map(function(e){
+  opts = opts || {};
+  return entries.map(function(e, i){
     var w = max ? Math.max(1, Math.round(e[1] / max * 100)) : 0;
-    return '<div class="st-hbar"><span class="lb" title="' + esc(e[0]).replace(/"/g,'&quot;') + '">' + esc(e[0]) + '</span><span class="tr"><span class="fi" style="display:block;width:' + w + '%"></span></span><span class="nv">' + e[1] + '</span></div>';
+    var color = opts.colors ? opts.colors[i % opts.colors.length] : null;
+    var label = opts.fmt ? opts.fmt(e[1]) : e[1];
+    return '<div class="st-hbar"><span class="lb" title="' + esc(e[0]).replace(/"/g,'&quot;') + '">' + esc(e[0]) + '</span><span class="tr"><span class="fi" style="display:block;width:' + w + '%' + (color ? ';background:' + color : '') + '"></span></span><span class="nv">' + label + '</span></div>';
   }).join('');
 }
 function statsDailyChart(days, vals){
@@ -3041,6 +3051,76 @@ function indicFindGroupe(arr, g){
 }
 function indicNum(n){ return String(n == null ? 0 : n).replace('.', ','); }
 function indicShortLabel(g){ return g === 'GDO' ? 'GDO' : g; }
+function genderDonut(hommes, femmes){
+  hommes = hommes || 0; femmes = femmes || 0;
+  var tot = hommes + femmes;
+  if (!tot) return '<div class="st-empty">Aucune donnée.</div>';
+  var r = 50, cx = 64, cy = 64, sw = 18, circ = 2 * Math.PI * r;
+  var pH = hommes / tot, dashH = pH * circ, dashF = circ - dashH;
+  var gap = Math.min(3, dashH * 0.08, dashF * 0.08);
+  var h1 = Math.max(0, dashH - gap), f1 = Math.max(0, dashF - gap);
+  var pctH = Math.round(pH * 1000) / 10, pctF = Math.round((1 - pH) * 1000) / 10;
+  return '<svg viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Répartition hommes et femmes">' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="#F3ECDD" stroke-width="' + sw + '"/>' +
+    (hommes ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="#2980B9" stroke-width="' + sw + '" stroke-dasharray="' + h1 + ' ' + (circ - h1) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"><title>Hommes : ' + hommes + ' (' + indicNum(pctH) + ' %)</title></circle>' : '') +
+    (femmes ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="#D6602F" stroke-width="' + sw + '" stroke-dasharray="' + f1 + ' ' + (circ - f1) + '" stroke-dashoffset="' + (-dashH) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"><title>Femmes : ' + femmes + ' (' + indicNum(pctF) + ' %)</title></circle>' : '') +
+    '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle" font-family="Fraunces, serif" font-size="24" font-weight="600" fill="var(--dk)">' + tot + '</text>' +
+    '<text x="' + cx + '" y="' + (cy + 15) + '" text-anchor="middle" font-size="10" fill="var(--md)">collaborateurs</text>' +
+  '</svg>';
+}
+function agePyramidChart(bandes){
+  if (!bandes || !bandes.length) return '<div class="st-empty">Aucune donnée.</div>';
+  var bw0 = (document.getElementById('indic-body') || {}).clientWidth || 650;
+  var W = Math.max(320, Math.min(650, bw0 - 34));
+  var L = 46, R = 46, CGUT = 50, T = 8, rowH = 32, barH = 18;
+  var H = T + rowH * bandes.length + 8;
+  var mid = W / 2;
+  var pw = Math.max(20, Math.min(mid - CGUT / 2 - L, W - R - (mid + CGUT / 2)));
+  var maxV = Math.max.apply(null, bandes.map(function(b){ return Math.max(b.hommes || 0, b.femmes || 0); }).concat([1]));
+  var rows = '';
+  bandes.forEach(function(b, i){
+    var y = T + i * rowH;
+    var hommes = b.hommes || 0, femmes = b.femmes || 0;
+    var hW = hommes / maxV * pw, fW = femmes / maxV * pw;
+    var hx0 = mid - CGUT / 2, fx0 = mid + CGUT / 2;
+    rows += '<rect x="' + (hx0 - hW) + '" y="' + y + '" width="' + hW + '" height="' + barH + '" rx="2" fill="#2980B9"><title>' + esc(b.tranche) + ' — Hommes : ' + hommes + '</title></rect>';
+    rows += '<rect x="' + fx0 + '" y="' + y + '" width="' + fW + '" height="' + barH + '" rx="2" fill="#D6602F"><title>' + esc(b.tranche) + ' — Femmes : ' + femmes + '</title></rect>';
+    if (hommes) rows += '<text x="' + (hx0 - hW - 5) + '" y="' + (y + barH - 4) + '" text-anchor="end" font-size="10.5" fill="var(--dk)">' + hommes + '</text>';
+    if (femmes) rows += '<text x="' + (fx0 + fW + 5) + '" y="' + (y + barH - 4) + '" text-anchor="start" font-size="10.5" fill="var(--dk)">' + femmes + '</text>';
+    rows += '<text x="' + mid + '" y="' + (y + barH - 4) + '" text-anchor="middle" font-size="10" fill="var(--md)">' + esc(b.tranche) + '</text>';
+  });
+  return '<div class="st-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Pyramide des âges, hommes et femmes">' + rows + '</svg></div>';
+}
+function esTrendChart(annees, totaux){
+  var bw0 = (document.getElementById('indic-body') || {}).clientWidth || 650;
+  var W = Math.max(280, Math.min(650, bw0 - 34)), H = 170, L = 34, R = 8, T = 10, B = 24;
+  var pw = W - L - R, ph = H - T - B;
+  var vals = [];
+  annees.forEach(function(y){ vals.push(totaux[y].entrees, totaux[y].sorties); });
+  var max = statsNice(Math.max.apply(null, vals.concat([1])));
+  var n = annees.length, slot = pw / n;
+  var g = '';
+  for (var i = 0; i <= 4; i++){
+    var gy = T + ph - ph * i / 4, v = Math.round(max * i / 4);
+    g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="#EFE7D6" stroke-width="1"/>' +
+         '<text x="' + (L - 6) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="10.5" fill="#78705F">' + v + '</text>';
+  }
+  var bars = '', xl = '';
+  var barW = Math.max(6, (slot - 14) / 2);
+  annees.forEach(function(yr, i){
+    var cx = L + i * slot + slot / 2;
+    var e = totaux[yr].entrees, s = totaux[yr].sorties;
+    var eH = e / max * ph, sH = s / max * ph;
+    var ex = cx - barW - 2, sx = cx + 2;
+    bars += '<rect x="' + ex + '" y="' + (T + ph - eH) + '" width="' + barW + '" height="' + eH + '" rx="2" fill="#27AE60"><title>' + yr + ' — Entrées : ' + e + '</title></rect>';
+    bars += '<rect x="' + sx + '" y="' + (T + ph - sH) + '" width="' + barW + '" height="' + sH + '" rx="2" fill="#C0392B"><title>' + yr + ' — Sorties : ' + s + '</title></rect>';
+    if (e) bars += '<text x="' + (ex + barW / 2) + '" y="' + (T + ph - eH - 4) + '" text-anchor="middle" font-size="10" fill="var(--dk)">' + e + '</text>';
+    if (s) bars += '<text x="' + (sx + barW / 2) + '" y="' + (T + ph - sH - 4) + '" text-anchor="middle" font-size="10" fill="var(--dk)">' + s + '</text>';
+    xl += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10.5" fill="#78705F">' + yr + '</text>';
+  });
+  return '<div class="st-chart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Entrées et sorties par année">' + g +
+    '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ph) + '" y2="' + (T + ph) + '" stroke="#CFC5AE" stroke-width="1"/>' + bars + xl + '</svg></div>';
+}
 function ageMoyenBarChart(rows){
   var bw0 = (document.getElementById('indic-body') || {}).clientWidth || 650;
   var W = Math.max(280, Math.min(650, bw0 - 34)), H = 190, L = 34, R = 8, T = 10, B = 26;
@@ -3061,7 +3141,7 @@ function ageMoyenBarChart(rows){
     var cx = L + i * slot + slot / 2;
     var hH = (r.hommes || 0) / max * ph, fH = (r.femmes || 0) / max * ph;
     var hx = cx - barW - 2, fx = cx + 2;
-    bars += '<rect x="' + hx + '" y="' + (T + ph - hH) + '" width="' + barW + '" height="' + hH + '" rx="2" fill="#1C1710"><title>' + esc(r.label) + ' — Hommes : ' + indicNum(r.hommes) + ' ans</title></rect>';
+    bars += '<rect x="' + hx + '" y="' + (T + ph - hH) + '" width="' + barW + '" height="' + hH + '" rx="2" fill="#2980B9"><title>' + esc(r.label) + ' — Hommes : ' + indicNum(r.hommes) + ' ans</title></rect>';
     bars += '<rect x="' + fx + '" y="' + (T + ph - fH) + '" width="' + barW + '" height="' + fH + '" rx="2" fill="#D6602F"><title>' + esc(r.label) + ' — Femmes : ' + indicNum(r.femmes) + ' ans</title></rect>';
     xl += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10.5" fill="#78705F">' + esc(r.label) + '</text>';
   });
@@ -3091,39 +3171,53 @@ function renderIndicateurs(){
   cnt.textContent = D.effectifs.total.total;
   prv.innerHTML = '<div class="pv-item">' + D.effectifs.total.total + ' collaborateurs · âge moyen ' + indicNum(D.ageMoyen.total.total) + ' ans</div>';
 
-  var kpis = '<div class="st-kpis">' +
-    '<div class="st-kpi"><div class="v">' + eff.total + '</div><div class="k">Collaborateurs — ' + indicScopeLabel(g) + '</div></div>' +
+  var annees = D.entreesSorties.annees;
+  var dernAnnee = annees[annees.length - 1];
+  var esRowsScope = D.entreesSorties.parSociete.filter(function(s){ return !g || s.groupe === g; });
+  var esTotauxScope = {};
+  annees.forEach(function(y){
+    var e = 0, s = 0;
+    esRowsScope.forEach(function(r){ e += r.annees[y].entrees; s += r.annees[y].sorties; });
+    esTotauxScope[y] = { entrees: e, sorties: s };
+  });
+  var turnover = eff.total ? Math.round(1000 * (esTotauxScope[dernAnnee].entrees + esTotauxScope[dernAnnee].sorties) / 2 / eff.total) / 10 : 0;
+
+  var today = new Date();
+  var moisFR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var dateLabel = today.getDate() + ' ' + moisFR[today.getMonth()] + ' ' + today.getFullYear();
+
+  var head = '<div class="bs-head"><h3>Bilan social — ' + esc(indicScopeLabel(g)) + '</h3><div class="bs-sub">Groupe Edgard · situation au ' + dateLabel + '</div></div>';
+
+  var kpis = '<div class="st-kpis bs-kpis">' +
+    '<div class="st-kpi"><div class="v">' + eff.total + '</div><div class="k">Collaborateurs</div></div>' +
     '<div class="st-kpi"><div class="v">' + indicNum(age.total) + '</div><div class="k">Âge moyen (ans)</div></div>' +
-    '<div class="st-kpi"><div class="v">' + indicNum(anc) + '</div><div class="k">Ancienneté moyenne (ans)</div></div></div>';
+    '<div class="st-kpi"><div class="v">' + indicNum(anc) + '</div><div class="k">Ancienneté moyenne (ans)</div></div>' +
+    '<div class="st-kpi"><div class="v">' + indicNum(turnover) + ' %</div><div class="k">Turnover ' + dernAnnee + ' (estimé)</div></div></div>';
 
   var ageRows = ['EDGARD', 'GDO', 'SUPPORT'].map(function(gg){
     var e = indicFindGroupe(D.ageMoyen.parGroupe, gg) || { hommes: 0, femmes: 0, total: 0 };
     return { label: indicShortLabel(gg), hommes: e.hommes, femmes: e.femmes, total: e.total };
   });
   ageRows.push({ label: 'Total', hommes: D.ageMoyen.total.hommes, femmes: D.ageMoyen.total.femmes, total: D.ageMoyen.total.total });
-  var ageTable = '<div class="soldes-wrap"><table class="soldes-table"><thead><tr><th>Groupe</th><th>Hommes</th><th>Femmes</th><th>Total</th></tr></thead><tbody>' +
-    ageRows.map(function(r){ return '<tr><td class="who">' + esc(r.label) + '</td><td>' + indicNum(r.hommes) + '</td><td>' + indicNum(r.femmes) + '</td><td class="total">' + indicNum(r.total) + '</td></tr>'; }).join('') +
-    '</tbody></table></div>';
-  var ageCard = '<div class="st-card wide"><h4>Moyenne d\'âge (en années)</h4><div class="sub">Par groupe, hommes / femmes</div>' + ageTable + ageMoyenBarChart(ageRows) +
-    '<div class="st-leg" style="margin-top:8px"><span><span class="sw" style="background:#1C1710"></span>Hommes</span><span><span class="sw" style="background:#D6602F"></span>Femmes</span></div></div>';
+  var ageCard = '<div class="st-card wide"><h4>Moyenne d\'âge par groupe</h4><div class="sub">Hommes / femmes, en années</div>' + ageMoyenBarChart(ageRows) +
+    '<div class="st-leg" style="margin-top:4px"><span><span class="sw" style="background:#2980B9"></span>Hommes</span><span><span class="sw" style="background:#D6602F"></span>Femmes</span></div></div>';
 
   var totHF = eff.hommes + eff.femmes;
   var pctH = totHF ? Math.round(eff.hommes / totHF * 1000) / 10 : 0, pctF = totHF ? Math.round(eff.femmes / totHF * 1000) / 10 : 0;
   var hfCard = '<div class="st-card"><h4>Répartition hommes / femmes</h4><div class="sub">' + indicScopeLabel(g) + '</div>' +
-    (totHF ? '<div class="st-dev" role="img" aria-label="Répartition hommes femmes">' +
-      (eff.hommes ? '<i style="background:#1C1710;width:' + pctH + '%" title="Hommes : ' + eff.hommes + '"></i>' : '') +
-      (eff.femmes ? '<i style="background:#D6602F;width:' + pctF + '%" title="Femmes : ' + eff.femmes + '"></i>' : '') +
-      '</div><div class="st-leg"><span><span class="sw" style="background:#1C1710"></span>Hommes — <b>' + pctH + ' %</b> (' + eff.hommes + ')</span><span><span class="sw" style="background:#D6602F"></span>Femmes — <b>' + pctF + ' %</b> (' + eff.femmes + ')</span></div>' : '<div class="st-empty">Aucune donnée.</div>') + '</div>';
+    '<div class="bs-donut-wrap">' + genderDonut(eff.hommes, eff.femmes) +
+    '<div class="st-leg" style="flex-direction:column;align-items:flex-start;gap:6px"><span><span class="sw" style="background:#2980B9"></span>Hommes — <b>' + pctH + ' %</b> (' + eff.hommes + ')</span><span><span class="sw" style="background:#D6602F"></span>Femmes — <b>' + pctF + ' %</b> (' + eff.femmes + ')</span></div></div></div>';
 
-  var pyrEntries = pyr.map(function(b){ return [b.tranche, b.effectif]; });
-  var pyrMax = pyrEntries.length ? Math.max.apply(null, pyrEntries.map(function(e){ return e[1]; })) : 0;
-  var pyrCard = '<div class="st-card"><h4>Pyramide des âges</h4><div class="sub">' + indicScopeLabel(g) + '</div>' + statsHBars(pyrEntries, pyrMax) + '</div>';
+  var pyrCard = '<div class="st-card wide"><h4>Pyramide des âges</h4><div class="sub">' + indicScopeLabel(g) + ' · hommes / femmes par tranche</div>' + agePyramidChart(pyr) +
+    '<div class="st-leg" style="margin-top:4px"><span><span class="sw" style="background:#2980B9"></span>Hommes</span><span><span class="sw" style="background:#D6602F"></span>Femmes</span></div></div>';
 
   var ctrEntries = [['CDI', ctr.cdi], ['CDD', ctr.cdd], ['CT Pro', ctr.ctPro], ['CT Appr.', ctr.ctAppr]];
-  var ctrCard = '<div class="st-card"><h4>Répartition par type de contrat</h4><div class="sub">' + indicScopeLabel(g) + ' · ' + ctr.total + ' contrats</div>' + statsHBars(ctrEntries, ctr.total) + '</div>';
+  var ctrCard = '<div class="st-card"><h4>Répartition par type de contrat</h4><div class="sub">' + indicScopeLabel(g) + ' · ' + ctr.total + ' contrats</div>' +
+    statsHBars(ctrEntries, ctr.total, { colors: ['#D6602F', '#2980B9', '#27AE60', '#8E44AD'], fmt: function(v){ return v + ' <span style="color:var(--md)">(' + (ctr.total ? indicNum(Math.round(v / ctr.total * 1000) / 10) : 0) + ' %)</span>'; } }) + '</div>';
 
   var dipEntries = (D.diplomesBtsOl.parGroupe || []).map(function(d){ return [indicScopeLabel(d.groupe), d.pctBtsOl]; });
-  var dipCard = '<div class="st-card"><h4>% de diplômés BTS OL</h4><div class="sub">Par groupe (sur 100 %)</div>' + statsHBars(dipEntries, 100) + '</div>';
+  var dipCard = '<div class="st-card"><h4>% de diplômés BTS OL</h4><div class="sub">Par groupe (sur 100 %)</div>' +
+    statsHBars(dipEntries, 100, { colors: ['#D6602F', '#2980B9', '#27AE60'], fmt: function(v){ return indicNum(v) + ' %'; } }) + '</div>';
 
   var effRows = D.effectifs.parSociete.filter(function(s){ return !g || s.groupe === g; });
   var effTable = '<div class="st-card wide"><h4>Effectifs par magasin</h4><div class="sub">' + indicScopeLabel(g) + '</div>' +
@@ -3131,18 +3225,28 @@ function renderIndicateurs(){
     effRows.map(function(s){ return '<tr><td class="who">' + esc(s.societe) + '</td><td>' + esc(indicScopeLabel(s.groupe)) + '</td><td>' + s.hommes + '</td><td>' + s.femmes + '</td><td class="total">' + s.total + '</td></tr>'; }).join('') +
     '</tbody></table></div></div>';
 
-  var annees = D.entreesSorties.annees;
-  var esRows = D.entreesSorties.parSociete.filter(function(s){ return !g || s.groupe === g; });
+  var esTrend = '<div class="st-card wide"><h4>Entrées / sorties par année</h4><div class="sub">' + indicScopeLabel(g) + ' · 3 dernières années (glissant), ' + dernAnnee + ' en cours</div>' +
+    esTrendChart(annees, esTotauxScope) +
+    '<div class="st-leg" style="margin-top:4px"><span><span class="sw" style="background:#27AE60"></span>Entrées</span><span><span class="sw" style="background:#C0392B"></span>Sorties</span></div></div>';
+
   var esHead = '<th>Magasin</th>' + annees.map(function(y){ return '<th>Entrées ' + y + '</th><th>Sorties ' + y + '</th>'; }).join('');
-  var esTable = '<div class="st-card wide"><h4>Entrées / sorties par année</h4><div class="sub">' + indicScopeLabel(g) + ' · 3 dernières années (glissant), ' + (annees[annees.length-1]) + ' en cours</div>' +
+  var esTable = '<div class="st-card wide"><h4>Détail par magasin</h4><div class="sub">' + indicScopeLabel(g) + '</div>' +
     '<div class="soldes-wrap"><table class="soldes-table"><thead><tr>' + esHead + '</tr></thead><tbody>' +
-    esRows.map(function(s){
+    esRowsScope.map(function(s){
       return '<tr><td class="who">' + esc(s.societe) + '</td>' + annees.map(function(y){ return '<td class="poses">' + s.annees[y].entrees + '</td><td>' + s.annees[y].sorties + '</td>'; }).join('') + '</tr>';
     }).join('') +
-    '<tr><td class="who">Total</td>' + annees.map(function(y){ var t = D.entreesSorties.totaux[y]; return '<td class="total">' + t.entrees + '</td><td class="total">' + t.sorties + '</td>'; }).join('') + '</tr>' +
+    '<tr><td class="who">Total</td>' + annees.map(function(y){ var t = esTotauxScope[y]; return '<td class="total">' + t.entrees + '</td><td class="total">' + t.sorties + '</td>'; }).join('') + '</tr>' +
     '</tbody></table></div></div>';
 
-  body.innerHTML = kpis + '<div class="st-grid">' + ageCard + hfCard + pyrCard + ctrCard + dipCard + '</div>' + effTable + esTable;
+  body.innerHTML = head + kpis +
+    '<div class="bs-sec"><span class="bs-sec-n">1</span>Démographie</div>' +
+    '<div class="st-grid">' + hfCard + ageCard + pyrCard + '</div>' +
+    '<div class="bs-sec"><span class="bs-sec-n">2</span>Contrats &amp; qualification</div>' +
+    '<div class="st-grid">' + ctrCard + dipCard + '</div>' +
+    '<div class="bs-sec"><span class="bs-sec-n">3</span>Répartition par magasin</div>' +
+    effTable +
+    '<div class="bs-sec"><span class="bs-sec-n">4</span>Mouvements (entrées / sorties)</div>' +
+    esTrend + esTable;
 }
 
 /* ============================ SUIVI DU PERSONNEL (mouvements, live) ============================ */
