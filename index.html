@@ -819,6 +819,7 @@ function ficheTypeLabel(d){
   var corrige = STATE.motifs[d.id];
   if (corrige) return absMotifLib(corrige);
   if (/ABS/.test(String(d.type || '').toUpperCase())){
+    if (d.motif) return absMotifLib(d.motif);
     var k = absPayKey(d.lien);
     if (k){
       var ck = absKeyStr(k);
@@ -840,7 +841,7 @@ function ficheTypeLabel(d){
    STATE.motifs (correction manuelle RH, prioritaire) et absEnrich (recuperation du payload). */
 var ABS_TAG_COURT = { 'RTT':'RTT', 'Evt Fam':'Évt Fam', 'Décès':'Décès', 'CSS':'CSS', 'ANR':'ANR', 'Congé révision':'Révision', 'Maladie':'Maladie', 'Autre absence':'Absence' };
 function cpListAbsInfo(d){
-  var motif = STATE.motifs[d.id] || '';
+  var motif = STATE.motifs[d.id] || d.motif || '';
   var detail = '';
   if (!motif){
     var k = absPayKey(d.lien);
