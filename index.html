@@ -1066,10 +1066,11 @@ function renderCP(){
       var detailBit = absInfo && absInfo.detail ? ' · ' + esc(absInfo.detail) : '';
       var consultBtn = d.lien ? '<a class="consult" href="' + esc(d.lien) + '" target="_blank" rel="noopener">👁️ Consulter</a>' : '';
       var editBtn = '<button type="button" class="edit" id="edit-cp-' + domId(d.id) + '" onclick="ouvrirCorrectionNomCP(\'' + attrSafe(d.id) + '\')">✏️ Corriger nom</button>';
+      var annulerBtn = '<button type="button" class="delete" id="annuler-cp-' + domId(d.id) + '" onclick="annulerCP(\'' + attrSafe(d.id) + '\')">↩️ Annuler</button>';
       return '<div class="item-card complet" id="card-cp-' + domId(d.id) + '"><div class="top"><span class="who">' + who + '</span><span class="tag complet">' + type + '</span></div>' +
         '<div class="meta">' + soc + ' — ' + dates + detailBit + '</div>' +
         '<div class="since">Validée le ' + fmtDate(d.date_derniere_action) + '</div>' +
-        '<div class="btnrow">' + consultBtn + editBtn + '</div></div>';
+        '<div class="btnrow">' + consultBtn + editBtn + annulerBtn + '</div></div>';
     }).join('') + '</div>' : '<div class="empty">Aucune demande validée' + (activeSoc ? ' pour ' + esc(activeSoc) : '') + '.</div>';
   } else {
     body = filtered.length ? '<div class="item-grid">' + filtered.map(function(d){
@@ -1502,6 +1503,37 @@ function supprimerCP(id){
     .catch(function(){
       alert("Erreur lors de la suppression — réessayez.");
       if (btn){ btn.disabled = false; btn.textContent = '🗑️ Supprimer'; }
+    });
+}
+
+/* Annule une demande deja validee (ex: validation faite par erreur par le directeur).
+   Reutilise le meme backend que la suppression manuelle des demandes en attente : ce
+   workflow retire deja la ligne a la fois de Feuil1 et d'Archive, ce qui couvre le cas
+   d'une demande validee (presente dans Archive, parfois encore dans Feuil1). */
+function annulerCP(id){
+  var d = STATE.cpHistorique.filter(function(x){ return x.id === id; })[0];
+  if (!d){ alert("Demande introuvable — actualisez le tableau et réessayez."); return; }
+  var who = (d.prenom||'') + ' ' + (d.nom||'').toUpperCase();
+  var dateTxt = fmtDate(d.date_debut).split(' ')[0];
+  if (!confirm('Annuler la demande déjà validée de ' + who + ' (' + (d.societe||'') + ', ' + dateTxt + ') ?\n\nÀ utiliser si la validation a été faite par erreur. Cette action retire définitivement la demande du fichier Excel de suivi (elle disparaît aussi de l\'historique). Elle ne pourra pas être récupérée automatiquement — pensez à prévenir le collaborateur et le directeur si besoin.')) return;
+  var btn = document.getElementById('annuler-cp-' + domId(id));
+  if (btn){ btn.disabled = true; btn.textContent = 'Annulation…'; }
+  authFetch(N8N_CP_SUPPRIMER, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ id: d.id })
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(data){ return {ok:r.ok, data:data}; }); })
+    .then(function(res){
+      if (res.ok && res.data && res.data.ok){
+        STATE.cpHistorique = STATE.cpHistorique.filter(function(x){ return x.id !== id; });
+        renderCP();
+      } else {
+        alert((res.data && res.data.error) || "Erreur lors de l'annulation — réessayez.");
+        if (btn){ btn.disabled = false; btn.textContent = '↩️ Annuler'; }
+      }
+    })
+    .catch(function(){
+      alert("Erreur lors de l'annulation — réessayez.");
+      if (btn){ btn.disabled = false; btn.textContent = '↩️ Annuler'; }
     });
 }
 
