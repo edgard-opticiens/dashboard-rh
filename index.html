@@ -105,6 +105,12 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .var-final .chip{display:inline-flex;align-items:center;gap:5px;background:#F3F9FD;border:1px solid #AED6F1;border-radius:14px;padding:1px 4px 1px 9px;margin:0 4px 0 0;color:#1f618d;font-weight:600}
 .var-final .chip button{border:0;background:none;color:var(--red);cursor:pointer;font-size:10.5px;font-family:'Inter',sans-serif;padding:2px 6px;border-radius:10px}
 .var-final .chip button:hover{background:var(--red);color:#fff}
+.var-final-details{margin-top:12px;border:1.5px solid var(--bd);border-radius:10px;background:var(--lt);overflow:hidden}
+.var-final-details summary{cursor:pointer;padding:9px 14px;font-weight:700;font-size:12.5px;color:#1e7a45;background:#F3FBF6;list-style:none}
+.var-final-details summary::-webkit-details-marker{display:none}
+.var-final-details summary::before{content:"▸ "}
+.var-final-details[open] summary::before{content:"▾ "}
+.var-final-details .var-grid{padding:12px 14px 4px}
 #vv-modal{display:none;position:fixed;inset:0;background:rgba(28,23,16,.5);z-index:300;align-items:flex-start;justify-content:center;padding:28px 14px;overflow-y:auto}
 #vv-modal.show{display:flex}
 .vv-box{background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);width:100%;max-width:1080px;padding:22px 24px 20px;position:relative}
@@ -1203,13 +1209,29 @@ function renderVariables(){
         '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">Ouvrir le portail ↗</a></div>' +
         '</div>';
     }).join('') + '</div>' : '<div class="empty">Tous les magasins sont à jour pour ' + libellePeriode(info.periode) + '.</div>';
-    var finalisees = info.magasins.filter(function(m){ return m.finalise_manuel; });
-    if (finalisees.length){
-      body += '<div class="var-final">Finalisées manuellement : ' + finalisees.map(function(m){
-        return '<span class="chip">' + esc(m.code) +
-          '<button type="button" onclick="voirVariable(\'' + esc(m.code) + '\')" title="Visualiser la variable">👁</button>' +
-          '<button type="button" onclick="annulerFinalisation(\'' + esc(m.code) + '\')" title="Annuler la finalisation">↩ annuler</button></span>';
-      }).join('') + '</div>';
+    // Un magasin qui a reçu toutes ses signatures (statut "complet") quitte directement la
+    // liste "pending" ci-dessus et n'apparaissait auparavant nulle part : seuls les magasins
+    // clôturés à la main (finalise_manuel) avaient droit à une mention. On regroupe maintenant
+    // TOUS les magasins complets (signés naturellement ou finalisés à la main) dans un onglet
+    // repliable "Finalisées" sous le reste, pour qu'on puisse toujours les retrouver/visualiser.
+    var completes = info.magasins.filter(function(m){ return m.statut === 'complet'; });
+    if (completes.length){
+      body += '<details class="var-final-details"><summary>✅ Finalisées (' + completes.length + ')</summary>' +
+        '<div class="var-grid">' + completes.map(function(m){
+          var tagCls = m.finalise_manuel ? 'finalise' : 'complet';
+          var tagTxt = m.finalise_manuel ? 'Finalisée manuellement' : 'Complète';
+          var sig = '<div class="sig">' + (m.signatures_ok||0) + ' / ' + (m.total_salaries||0) + ' signés</div>';
+          var finfo = (m.finalise_manuel && m.finalise_info) ? '<div class="finfo">Par ' + esc(m.finalise_info.par || 'RH') + (m.finalise_info.commentaire ? ' — ' + esc(m.finalise_info.commentaire) : '') + '</div>' : '';
+          var portalUrl = VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(m.code);
+          var revoirBtn = !m.finalise_manuel ? '<div class="portal"><a href="' + esc(portalUrl) + '" target="_blank" rel="noopener">🔎 Revoir / télécharger ↗</a></div>' : '';
+          var annulerBtn = m.finalise_manuel ? '<button type="button" class="annuler" onclick="annulerFinalisation(\'' + esc(m.code) + '\')">↩ Annuler la finalisation</button>' : '';
+          return '<div class="var-card ' + tagCls + '"><div class="code">' + esc(m.code) + '</div>' +
+            '<div class="dir">' + esc(m.directeur) + '</div>' +
+            '<span class="badge">' + tagTxt + '</span>' + sig + finfo +
+            '<button type="button" class="voir" onclick="voirVariable(\'' + esc(m.code) + '\')">👁 Visualiser</button>' +
+            annulerBtn + revoirBtn +
+            '</div>';
+        }).join('') + '</div></details>';
     }
     box.innerHTML = body;
     loadPinsFor(pending.map(function(m){ return m.code; }));
