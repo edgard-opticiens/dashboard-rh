@@ -757,7 +757,7 @@ function libellePeriode(p){
 }
 
 /* ============================ DONNEES ============================ */
-var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquants: [], edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
+var STATE = { cp: [], cpHistorique: [], variables: null, hs: [], acompte: [], soldes: [], soldesArretes: [], soldesMois: [], plannings: [], planningsManquantsParAnnee: {}, edev: [], edevBase: [], edevManuel: [], dirs: [], dirsAbs: [], dirsBase: [], motifs: {},
   anniversaires: { aujourdhui: [], bientot: [] }, nouveaux: [], trombinoMagasin: '', trombinoCache: {}, trombinoFiltre: '', liens: [], ndf: [], ndfHistorique: [], indic: null, suivi: null };
 var VAR_PERIODE = null;
 
@@ -2052,8 +2052,10 @@ function renderSoldes(){
 
 function renderPlannings(){
   var box = document.getElementById('sec-plannings').querySelector('.panel-body');
-  var dispo = STATE.plannings || [];
-  var manquants = STATE.planningsManquants || [];
+  var selEl = document.getElementById('plannings-annee-select');
+  var annee = parseInt((selEl && selEl.value) || '2026', 10);
+  var dispo = (STATE.plannings || []).filter(function(p){ return p.annee === annee; });
+  var manquants = (STATE.planningsManquantsParAnnee || {})[annee] || [];
   var total = dispo.length + manquants.length;
 
   document.getElementById('plannings-count').textContent = dispo.length + '/' + total;
@@ -2274,6 +2276,7 @@ function buildPanels(){
       '<div class="panel-face" onclick="togglePanel(\'sec-plannings\')"><div><div class="n" id="plannings-count">0</div><div class="l">Plannings apprentis disponibles</div></div><div class="chev">▾</div></div>' +
       '<div class="panel-preview" id="plannings-preview" onclick="togglePanel(\'sec-plannings\')"></div>' +
       '<div class="panel-detail">' +
+        '<div class="panel-toolbar"><span class="tb-label">Année :</span><select id="plannings-annee-select" onchange="renderPlannings()"><option value="2026">2026</option><option value="2027">2027</option></select></div>' +
         '<div class="panel-note" id="plannings-note">Accès direct à tous les plannings apprentis déposés sur OneDrive — pas besoin du code magasin.</div>' +
         '<div class="panel-body"></div>' +
       '</div>' +
@@ -3533,7 +3536,7 @@ function loadAll(){
     STATE.soldesMois = soldesParsed.mois;
 
     STATE.plannings = (results[4] && results[4].plannings) || [];
-    STATE.planningsManquants = (results[4] && results[4].magasinsManquants) || [];
+    STATE.planningsManquantsParAnnee = (results[4] && results[4].manquantsParAnnee) || {};
 
     STATE.liens = (results[12] && results[12].liens) || [];
     STATE.ndf = (results[13] && results[13].data) || [];
