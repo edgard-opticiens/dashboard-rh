@@ -136,6 +136,15 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);min-height:10
 .vv-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
 .vv-actions a{font-size:11.5px;font-weight:600;color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:16px;padding:5px 13px}
 .vv-actions a:hover{background:var(--blue);color:#fff}
+.vv-actions button.vv-print{font-size:11.5px;font-weight:600;color:var(--blue);background:#fff;border:1px solid var(--blue);border-radius:16px;padding:5px 13px;cursor:pointer;font-family:inherit}
+.vv-actions button.vv-print:hover{background:var(--blue);color:#fff}
+@media print{
+  body *{visibility:hidden}
+  #vv-modal, #vv-modal *{visibility:visible}
+  #vv-modal{position:absolute;inset:0;background:#fff;padding:0;margin:0;display:flex;align-items:flex-start;overflow:visible}
+  .vv-box{box-shadow:none;max-width:100%;width:100%;padding:0}
+  .vv-x,.vv-actions{display:none}
+}
 .var-card .portal{margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd)}
 .var-card .portal a{display:inline-block;font-size:10.5px;font-weight:700;color:var(--blue);text-decoration:none}
 .var-card .portal a:hover{text-decoration:underline}
@@ -1326,6 +1335,7 @@ function annulerFinalisation(code){
 /* ---------- Visualiser la variable d'un magasin ---------- */
 var N8N_VAR_ETAT_LOAD = 'https://edgard-opticiens.app.n8n.cloud/webhook/variables-etat-load';
 function fermerVariable(){ document.getElementById('vv-modal').classList.remove('show'); }
+function imprimerVariable(){ window.print(); }
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') fermerVariable(); });
 function vvDate(iso){
   var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
@@ -1398,7 +1408,7 @@ function voirVariable(code){
           (snap.dirSig ? '<span class="vv-ok">✓ signé</span>' : '<span class="vv-no">signature à venir</span>') + '</div>';
       }
     }
-    html += '<div class="vv-actions"><a href="' + esc(VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(code) + '&periode=' + encodeURIComponent(periode)) + '" target="_blank" rel="noopener">Ouvrir dans le portail ↗</a></div>';
+    html += '<div class="vv-actions"><button type="button" class="vv-print" onclick="imprimerVariable()">🖨️ Imprimer</button><a href="' + esc(VAR_PORTAL_BASE + '?mag=' + encodeURIComponent(code) + '&periode=' + encodeURIComponent(periode)) + '" target="_blank" rel="noopener">Ouvrir dans le portail ↗</a></div>';
     box.innerHTML = html;
   });
 }
