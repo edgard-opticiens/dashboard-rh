@@ -1857,7 +1857,7 @@ function ouvrirCorrectionHS(societe, nom, prenom, periode){
       '<button type="button" onclick="corrigerPeriodeHS()" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">Corriger la période</button>' +
     '</div>' +
     '<div id="hs-correction-body" style="font-size:12.5px;color:#999">Chargement…</div>' +
-    '<div style="font-size:11px;color:#999;margin-top:10px">Chaque semaine ne doit apparaître qu\'une seule fois. Une correction est impossible une fois la demande signée par la Direction.</div>' +
+    '<div style="font-size:11px;color:#999;margin-top:10px">Chaque semaine ne doit apparaître qu\'une seule fois. Après signature de la Direction, seule la correction « férié / heures sup » reste disponible — les autres corrections (semaine, suppression, période) sont bloquées.</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center"><span id="hs-correction-msg" style="font-size:12px;color:#c0392b;flex:1"></span>' +
     '<button id="hs-correction-close" style="font-family:inherit;font-size:12.5px;padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">Fermer</button></div></div>';
   document.body.appendChild(ov);
@@ -1889,14 +1889,31 @@ function hsCorrectionRenderLignes(){
   var lignes = HS_CORRECTION_LIGNES || [];
   if (!lignes.length){ body.innerHTML = '<div style="color:#999">Aucune ligne.</div>'; return; }
   body.innerHTML = lignes.map(function(l, i){
+    var ferieOn = !!l.ferie;
+    var h25 = parseFloat(l.h25) || 0, h50 = parseFloat(l.h50) || 0, hn = parseFloat(l.hn) || 0;
+    var tauxTxt = ferieOn ? ((hn || l.h || 0) + 'h normales (férié)') : (h25 + 'h à 25%' + (h50 ? ' + ' + h50 + 'h à 50%' : ''));
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eee;flex-wrap:wrap">' +
       '<span style="font-size:12px;color:#666">Sem. <input type="number" min="1" max="53" value="' + esc(l.s) + '" id="hs-correction-s-' + i + '" style="width:48px;font-family:inherit;font-size:12.5px;padding:3px 5px;border:1px solid #ddd;border-radius:5px;margin-left:4px"></span>' +
       '<span style="font-size:12px;color:#666">' + esc(l.h) + ' h — ' + esc(l.motif || '') + '</span>' +
+      '<span style="font-size:11px;font-weight:600;color:' + (ferieOn ? 'var(--orange)' : 'var(--green)') + '">' + esc(tauxTxt) + '</span>' +
       '<span style="flex:1"></span>' +
       '<button type="button" onclick="corrigerSemaineHS(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">Enregistrer</button>' +
+      '<button type="button" onclick="corrigerFerieHS(' + i + ',' + (!ferieOn) + ')" title="Fonctionne même après signature de la Direction" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--orange);background:#fff;color:var(--orange);cursor:pointer;font-family:inherit">' + (ferieOn ? 'Repasser en heures sup' : 'Marquer férié') + '</button>' +
       '<button type="button" onclick="supprimerLigneHS(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--red);background:#fff;color:var(--red);cursor:pointer;font-family:inherit">Supprimer</button>' +
       '</div>';
   }).join('');
+}
+function corrigerFerieHS(index, ferie){
+  var ctx = HS_CORRECTION_CTX;
+  var msg = document.getElementById('hs-correction-msg');
+  if (!ctx) return;
+  if (msg) msg.textContent = '';
+  hsCorrigerApi({ action: 'corriger_ferie', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode, index: index, ferie: ferie })
+    .then(function(res){
+      if (!res || !res.ok){ if (msg) msg.textContent = (res && res.error) || 'Erreur — réessayez.'; return; }
+      hsCorrectionCharger();
+    })
+    .catch(function(){ if (msg) msg.textContent = 'Erreur — réessayez.'; });
 }
 function corrigerSemaineHS(index){
   var ctx = HS_CORRECTION_CTX;
