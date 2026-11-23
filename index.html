@@ -1856,8 +1856,13 @@ function ouvrirCorrectionHS(societe, nom, prenom, periode){
       '<input type="month" id="hs-correction-nouvelle-periode" value="' + esc(periode) + '" style="font-family:inherit;font-size:12.5px;padding:4px 6px;border:1px solid #ddd;border-radius:5px">' +
       '<button type="button" onclick="corrigerPeriodeHS()" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer;font-family:inherit">Corriger la période</button>' +
     '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7f7f5;border-radius:8px;margin-bottom:12px;flex-wrap:wrap">' +
+      '<span style="font-size:12px;color:#666">Taux horaire 35H erroné ?</span>' +
+      '<input type="number" step="0.0001" min="0" id="hs-correction-nouveau-taux" placeholder="ex : 12,40" style="width:90px;font-family:inherit;font-size:12.5px;padding:4px 6px;border:1px solid #ddd;border-radius:5px">' +
+      '<button type="button" onclick="corrigerTauxHS()" title="Fonctionne même après signature de la Direction" style="font-size:11px;padding:4px 9px;border-radius:12px;border:1px solid var(--orange);background:#fff;color:var(--orange);cursor:pointer;font-family:inherit">Corriger le taux</button>' +
+    '</div>' +
     '<div id="hs-correction-body" style="font-size:12.5px;color:#999">Chargement…</div>' +
-    '<div style="font-size:11px;color:#999;margin-top:10px">Chaque semaine ne doit apparaître qu\'une seule fois. Après signature de la Direction, seule la correction « férié / heures sup » reste disponible — les autres corrections (semaine, suppression, période) sont bloquées.</div>' +
+    '<div style="font-size:11px;color:#999;margin-top:10px">Chaque semaine ne doit apparaître qu\'une seule fois. Après signature de la Direction, seules les corrections « férié / heures sup » et « taux horaire » restent disponibles — les autres (semaine, suppression, période) sont bloquées.</div>' +
     '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;align-items:center"><span id="hs-correction-msg" style="font-size:12px;color:#c0392b;flex:1"></span>' +
     '<button id="hs-correction-close" style="font-family:inherit;font-size:12.5px;padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">Fermer</button></div></div>';
   document.body.appendChild(ov);
@@ -1879,6 +1884,8 @@ function hsCorrectionCharger(){
     .then(function(res){
       if (!res || !res.ok){ body.innerHTML = ''; if (msg) msg.textContent = (res && res.error) || 'Erreur de chargement.'; return; }
       HS_CORRECTION_LIGNES = res.lignes || [];
+      var tauxInp = document.getElementById('hs-correction-nouveau-taux');
+      if (tauxInp && document.activeElement !== tauxInp) tauxInp.value = res.taux35 || '';
       hsCorrectionRenderLignes();
     })
     .catch(function(){ body.innerHTML = ''; if (msg) msg.textContent = 'Erreur de chargement — réessayez.'; });
@@ -1937,6 +1944,23 @@ function supprimerLigneHS(index){
   if (!confirm('Supprimer cette ligne ?')) return;
   if (msg) msg.textContent = '';
   hsCorrigerApi({ action: 'supprimer_ligne', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode, index: index })
+    .then(function(res){
+      if (!res || !res.ok){ if (msg) msg.textContent = (res && res.error) || 'Erreur — réessayez.'; return; }
+      hsCorrectionCharger();
+    })
+    .catch(function(){ if (msg) msg.textContent = 'Erreur — réessayez.'; });
+}
+function corrigerTauxHS(){
+  var ctx = HS_CORRECTION_CTX;
+  var inp = document.getElementById('hs-correction-nouveau-taux');
+  var msg = document.getElementById('hs-correction-msg');
+  if (!ctx || !inp) return;
+  var taux = String(inp.value || '').replace(',', '.').trim();
+  var tauxNum = Number(taux);
+  if (!taux || !isFinite(tauxNum) || tauxNum <= 0){ if (msg) msg.textContent = 'Taux horaire invalide.'; return; }
+  if (!confirm('Appliquer le taux ' + taux + ' € à toutes les lignes de cette demande ? Les montants seront recalculés.')) return;
+  if (msg) msg.textContent = '';
+  hsCorrigerApi({ action: 'corriger_taux', societe: ctx.societe, nom: ctx.nom, prenom: ctx.prenom, periode: ctx.periode, taux: taux })
     .then(function(res){
       if (!res || !res.ok){ if (msg) msg.textContent = (res && res.error) || 'Erreur — réessayez.'; return; }
       hsCorrectionCharger();
